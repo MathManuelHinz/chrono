@@ -10,7 +10,6 @@ import secrets
 #todo
 #-setup
 #silent_events
-#clear future
 #show x days
 #project stats
 class ChronoEvent:
@@ -37,14 +36,6 @@ class ChronoEvent:
         d["what"]=self.what
         d["tags"]=self.tags
         return d
-
-class ChronoEval:
-
-    def __init__(self):
-        pass
-
-    def __repr__(self):
-        pass
 
 
 class ChronoDay:
@@ -75,7 +66,7 @@ class ChronoDay:
     def __repr__(self)->str:
         if self.events == []:
             return  f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n"
-        else: return f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n" + reduce(lambda a,b: a+"\n\n"+b, [event.__repr__() for event in self.events])
+        else: return f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n" + reduce(lambda a,b: a+"\n\n"+b, [event.__repr__() for event in sorted(self.events, key=lambda x: x.start)])
 
     def check_overlap(self, event1:ChronoEvent, event2:ChronoEvent):
         if event1.start <= event2.start:
@@ -94,12 +85,12 @@ class ChronoDay:
                     todel.append(e)
             for e in todel:
                 self.events.remove(e)
+        else: raise Exception("Overlap")
         cs, ce=self.get_bounds()
         if event.start <= cs:
             self.day_start=event.start
         if event.end >= ce:
             self.day_end=event.end
-        else: raise Exception("Overlap")
 
     def fill_empty(self, what:str="Relax")->None:
         pass
@@ -160,26 +151,24 @@ class ChronoProject:
     path:str
     name:str
     days:Dict[str, ChronoDay]
-    evals:Dict[str, ChronoEval]
     schedule:ChronoSchedule
 
     def __init__(self, name:str, path:str, schedule:ChronoSchedule=None):
         self.name=name
         self.path=path
         self.days=dict()
-        self.evals=dict()
         self.schedule=schedule
     
         self.header=["\\documentclass{article}"]
 
     def add_day(self,day:ChronoDay)->None:
-        if not self.schedule == None:
-            day.events += self.schedule.days[day.date.weekday()]
-            day.day_start, day.day_end = day.get_bounds()
-        self.days[day.date.isoformat()]=day
-
-    def add_eval(self, evalu:ChronoEval)->None:
-        pass
+        if not day.date.isoformat() in self.days.keys():
+            if not self.schedule == None:
+                day.events += self.schedule.days[day.date.weekday()]
+                day.day_start, day.day_end = day.get_bounds()
+            self.days[day.date.isoformat()]=day
+        else:
+            logging.warning(f"can`t add day {day.date.isoformat()}")
 
     def add_event(self, event:ChronoEvent, date:str, force:bool=False)->None:
         self.days[date].add_event(event, force)
@@ -190,15 +179,17 @@ class ChronoProject:
     def get_meta(self)->List[str]:
         return ["\\title{" + f"{self.name}"+"}"]
 
-    def export_pdf(self)->int:
-
+    def export_pdf(self, days=[""])->int:
+        if days==[""]:
+            days=[day for day in self.days.keys()]
+        days=[self.days[key] for key in filter(lambda x: x in self.days.keys(), days)]
         header=["\\documentclass{article}", "\\usepackage{xcolor}"]
         with open(self.name+".tex", "w+", encoding="utf-8") as f:
             f.write(list_to_string(header)+"\n"+list_to_string(self.get_meta())+"\n")
             f.write("\\begin{document}\n")
             f.write("\\maketitle\n")
             pagen=1
-            for day in sorted([day for day in self.days.values()], key=lambda x: x.date):
+            for day in sorted(days, key=lambda x: x.date):
                 if day.date < date.today():
                     pagen += 1
                 if day.events == []:
@@ -269,11 +260,8 @@ class MSSH:
         return reference
     
     @staticmethod
-    def c_mk(project:ChronoProject, reference:str, mode="pdf")->str:
-        if mode== "pdf":
-            project.export_pdf()
-        else:
-            print("invalid mode")
+    def c_mk(project:ChronoProject, reference:str, days="")->str:
+        project.export_pdf([date.today().isoformat() if day=="today" else day for day in days.split(",")])
         return reference
 
     @staticmethod
@@ -282,9 +270,10 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_show(project:ChronoProject, reference:str)->str:
-        page=project.export_pdf()
+    def c_show(project:ChronoProject, reference:str, days="")->str:
+        page=project.export_pdf([date.today().isoformat() if day=="today" else day for day in days.split(",")])
         if page > len(project.days.keys()): page=1
+        if not days == "": page=1 
         subprocess.Popen([secrets.path, "/A" ,f"page={page}", project.name+".pdf"], shell=True)
         return reference
 
@@ -362,6 +351,14 @@ class MSSH:
                     return reference
         return reference
 
+    @staticmethod
+    def c_end(project:ChronoProject, reference:str)->str:
+        for event in project.days[date.today().isoformat()].events:
+            if event.start <= datetime.now().time()<=event.end:
+                event.end=datetime.now().time()
+                return reference
+        logging.warning("coudln`t end event: no current event")
+        return reference
 
 MSSH_COMMS={
     "setr":MSSH.c_setr,
@@ -377,7 +374,8 @@ MSSH_COMMS={
     "getCurrent":MSSH.c_get_current,
     "today":MSSH.c_today,
     "delDay":MSSH.c_delete_day,
-    "delEvent":MSSH.c_delete_event
+    "delEvent":MSSH.c_delete_event,
+    "end":MSSH.c_end
 }
 
 class ChronoClient:
@@ -425,7 +423,7 @@ class ChronoClient:
         
         while not commands[-1] == "quit":
             print(reference, end=":")
-            ip=input().split(" ")
+            ip=input().split("#")
             commands.append(ip[0])
             if commands[-1] in self.command_set.keys():
                 logging.info(msg=f"{ip}")

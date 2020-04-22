@@ -3,7 +3,7 @@
         {"start": "08:00", "end": "10:00", "what":"Analysis 2", "tags":["mathe", "uni", "vorlesung"]},
         {"start": "10:00", "end": "12:00", "what":"Alma 2", "tags":["mathe", "uni", "vorlesung"]},
         {"start": "12:00", "end": "14:00", "what":"Alma 2 Übung", "tags":["mathe", "uni"]},
-        {"start": "15:00", "end": "16:00", "what":"Essen", "tags":["leben"]},
+        {"start": "14:00", "end": "15:00", "what":"Essen", "tags":["leben"]},
         {"start": "16:00", "end": "18:00", "what":"Analysis 2 Übung", "tags":["mathe", "uni"]},
         {"start": "18:00", "end": "19:00", "what":"Essen", "tags":["leben"]}
     ],
