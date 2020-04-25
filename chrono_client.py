@@ -9,9 +9,27 @@ import subprocess
 import secrets
 #todo
 #-setup
-#silent_events
-#show x days
 #project stats
+#add times to schedule?
+#check overlap
+
+class ChronoTime:
+
+    def __init__(self, start:str, what:str, tags:List[str]=[]):
+        self.start=time(int(start[0:2]), int(start[3:5]))
+        self.what=what
+        self.tags=tags
+
+    def to_dict(self)->Dict[str, Union[str, List[str]]]:
+        d=dict()
+        d["start"]=self.start.isoformat()
+        d["what"]=self.what
+        d["tags"]=self.tags
+        return d
+
+    def __repr__(self)->str:
+        return f"Time: {self.start}, what: {self.what}"
+
 class ChronoEvent:
 
 
@@ -26,10 +44,10 @@ class ChronoEvent:
         self.what=what
         self.tags=tags
 
-    def __repr__(self):
+    def __repr__(self)->str:
         return f"From {self.start.isoformat()} until {self.end.isoformat()} : {self.what}"
 
-    def to_dict(self):
+    def to_dict(self)->Dict[str, Union[str, List[str]]]:
         d=dict()
         d["start"]=self.start.isoformat()
         d["end"]=self.end.isoformat()
@@ -45,6 +63,7 @@ class ChronoDay:
     day_end:time
     events:List[ChronoEvent]
     date:date
+    silent_events:List[ChronoTime]
 
 
     def __init__(self, events:List[ChronoEvent], input_date:str,day_start:str=None, day_end:str=None):
@@ -62,19 +81,28 @@ class ChronoDay:
         else:
             self.day_end=time(int(day_end[0:2]), int(day_end[3:5]))
         self.date=date(int(input_date[0:4]), int(input_date[5:7]), int(input_date[8:10]))
-        
+        self.silent_events=[]
+
     def __repr__(self)->str:
         if self.events == []:
             return  f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n"
         else: return f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n" + reduce(lambda a,b: a+"\n\n"+b, [event.__repr__() for event in sorted(self.events, key=lambda x: x.start)])
 
-    def check_overlap(self, event1:ChronoEvent, event2:ChronoEvent):
-        if event1.start <= event2.start:
-            return event2.end <= event1.end
+    def check_overlap(self, event1:ChronoEvent, event2:ChronoEvent)->bool:
+        if event1.start==event2.start:
+            rtn=True 
+        elif event1.start < event2.start:
+            rtn= event2.start < event1.end
         else:
-            return event1.end <= event2.end
+            rtn= event1.start < event2.end
+        if rtn:
+            print(event1, event2)
+        return rtn
 
-    def add_event(self, event:ChronoEvent, force:bool=False):
+    def add_silent(self, silent_event:ChronoTime)->None:
+        self.silent_events.append(silent_event)
+
+    def add_event(self, event:ChronoEvent, force:bool=False)->None:
         if not reduce(lambda a,b: a or b, [self.check_overlap(e, event) for e in self.events], False) or self.events==[]:
             self.events.append(event)
         elif force:
@@ -106,7 +134,7 @@ class ChronoDay:
         ends=[event.end for event in self.events]
         return min(starts), max(ends)
 
-    def merge(self):
+    def merge(self)->None:
         for e1 in self.events:
             for e2 in self.events:
                 if not e1==e2 and e1.end==e2.start and e1.what==e2.what:
@@ -117,12 +145,13 @@ class ChronoDay:
                     self.add_event(e)
                     return self.merge()
 
-    def to_dict(self):
+    def to_dict(self)->Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]:
         d=dict()
         d["day_start"]=self.day_start.isoformat()
         d["day_end"]=self.day_end.isoformat()
         d["date"]=self.date.__str__()
         d["events"]=[event.to_dict() for event in self.events]
+        d["sevents"]=[event.to_dict() for event in self.silent_events]
         return d
 
 class ChronoSchedule:
@@ -136,7 +165,7 @@ class ChronoSchedule:
         for i  in range(7):
             self.days[i]=[ChronoEvent(e["start"], e["end"], e["what"], e["tags"]) for e in data[i]]
     
-MSSH_color_scheme={
+MSSH_color_scheme:Dict[str, str]={
     "leben":"black",
     "relax":"black",
     "mathe":"red",
@@ -202,6 +231,7 @@ class ChronoProject:
                     slots=day.get_slots()
                     data=[[f"{slot.start.isoformat()}-{slot.end.isoformat()}", "\\textcolor{"+MSSH_color_scheme[slot.tags[0]]+"}{"+f"{slot.what}"+"}"]for slot in slots]
                     write_table(f, [2, len(slots)], data=data)
+                    write_table(f, [2, len(day.silent_events)], data=[[time.start.isoformat(), time.what] for time in day.silent_events])
                     f.write("\\clearpage")
             f.write("\\end{document}\n")
         subprocess.run(["pdflatex", self.name+".tex"], stdout=subprocess.DEVNULL)
@@ -214,7 +244,7 @@ class ChronoProject:
         if os.path.isfile(f"{self.name}.tex"):os.remove(f"{self.name}.tex")
         return pagen
         
-    def save(self, path=None):
+    def save(self, path=None)->None:
         if path == None: path=self.path
         export=dict()
         export["name"]=self.name
@@ -246,6 +276,19 @@ class MSSH:
         if reference in project.days.keys():
             try:
                 project.add_event(ChronoEvent(start=start, end=end, what=what, tags=tags.split(",")), reference, force=int(force))
+            except Exception as e:
+                print(e)
+                logging.info(e)
+        else:
+            print("invalid key")
+            logging.info(f"invalid key (addEvent) : {reference}")
+        return reference
+
+    @staticmethod
+    def c_create_time(project:ChronoProject, reference:str, what:str, tags:str="relax", start:str="08:00")->str:
+        if reference in project.days.keys():
+            try:
+                project.days[reference].add_silent(ChronoTime(start=start,what=what, tags=tags.split(",")))
             except Exception as e:
                 print(e)
                 logging.info(e)
@@ -335,6 +378,14 @@ class MSSH:
         return reference
 
     @staticmethod
+    def c_day(project:ChronoProject, reference:str)->str:
+        if reference in project.days.keys():
+            print(project.days[reference])
+        else:
+            print(f"no plan for {reference}")
+        return reference
+
+    @staticmethod
     def c_delete_day(project:ChronoProject, reference:str)->str:
         if reference in project.days.keys():
             project.days.pop(reference)
@@ -360,19 +411,31 @@ class MSSH:
         logging.warning("coudln`t end event: no current event")
         return reference
 
+    @staticmethod
+    def c_times(project:ChronoProject, reference:str, days:int="1")->str:
+        d=date.today()
+        for _ in range(int(days)):
+            for time in project.days[d.isoformat()].silent_events:
+                print(f"{d.isoformat()} : {time}")
+            d += timedelta(days=1)
+        return reference
+
 MSSH_COMMS={
     "setr":MSSH.c_setr,
     "save":MSSH.c_save,
-    "createDay":MSSH.c_create_day,
-    "createEvent":MSSH.c_create_event,
+    "mkDay":MSSH.c_create_day,
+    "mkEvent":MSSH.c_create_event,
+    "mkTime":MSSH.c_create_time,
     "days":MSSH.c_days,
     "mk":MSSH.c_mk,
     "show":MSSH.c_show,
+    "times":MSSH.c_times,
     "genDays":MSSH.c_gen_days,
     "clear":MSSH.c_clear,
     "clearf":MSSH.c_clear_future,
     "getCurrent":MSSH.c_get_current,
     "today":MSSH.c_today,
+    "day":MSSH.c_day,
     "delDay":MSSH.c_delete_day,
     "delEvent":MSSH.c_delete_event,
     "end":MSSH.c_end
@@ -440,7 +503,10 @@ class ChronoClient:
         p=ChronoProject(name=d["name"], path=d["path"])
         for day in d["days"].values():
             events=[ChronoEvent(start=event["start"], end=event["end"], what=event["what"], tags=event["tags"]) for event in day["events"]]
+            sevents=[ChronoTime(start=event["start"], what=event["what"], tags=event["tags"]) for event in day["sevents"]]
             p.add_day(ChronoDay(events=events, input_date=day["date"], day_start=day["day_start"], day_end=day["day_end"]))
+            for time in sevents:
+                p.days[day["date"]].add_silent(time)
         self.project=p
 
     def __repr__(self)->str:
@@ -458,4 +524,4 @@ class ChronoStats:
         leben=sum([((datetime.combine(date.today(), event.end) - datetime.combine(date.today(), event.start)).seconds/3600)*("leben" in event.tags) for event in day.events])
         vorlesung=sum([((datetime.combine(date.today(), event.end) - datetime.combine(date.today(), event.start)).seconds/3600)*("vorlesung" in event.tags) for event in day.events])
         nvorlesung=mathe-vorlesung
-        return [("Stunden Mathe", mathe), ("Stunden Vorlesung", vorlesung),("Stunden Mathe (nicht Vorlesung)", nvorlesung), ("Stunden Leben", leben)]
+        return [("Stunden Mathe", round(mathe, ndigits=3)), ("Stunden Vorlesung", round(vorlesung, ndigits=3)),("Stunden Mathe (nicht Vorlesung)", round(nvorlesung, ndigits=3)), ("Stunden Leben", round(leben, ndigits=3))]
