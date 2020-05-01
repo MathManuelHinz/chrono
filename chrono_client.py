@@ -2,14 +2,14 @@ import json
 from typing import Dict, List, Tuple, Callable, Union
 from functools import reduce
 from datetime import datetime, time, date, timedelta
-from helper import list_to_string, write_table
+from helper import list_to_string, write_table, split_command
 import os
 import logging
 import subprocess
 import secrets
 from inspect import signature
 #todo
-#resturcture times
+#restructure times
 #assert
 #times
 #-setup
@@ -520,14 +520,15 @@ class ChronoClient:
 
     def c_help(self, project:ChronoProject, reference:str, cmd:str):
         if cmd in self.command_set.keys():
-            sig=str(signature(self.command_set[cmd]))
-            sig=sig.replace("(project: chrono_client.ChronoProject, reference: str", "").replace(") -> str", "")
-            if sig[0]==",":
+            sig=signature(self.command_set[cmd])
+            if not len(sig.parameters.keys())==2:
+                sig=str(sig).replace("(project: chrono_client.ChronoProject, reference: str", "").replace(") -> str", "")
                 print(sig[2:])
             else:
-                print(sig)
+                print(f"{cmd} takes no arguments")
         else:
-            print("unknown command")
+            logging.info(f"unknown command : {cmd}")
+            print(f"unknown command : {cmd}")
         return reference
 
     def __init__(self, path:str, command_set:Dict[str, Callable[[List[str]], None]]={}):
@@ -540,7 +541,6 @@ class ChronoClient:
         self.command_set["refresh"]=self.c_refresh
         self.command_set["help"]=self.c_help
         logging.basicConfig(filename="log.txt", level=logging.INFO)
-        print(signature(MSSH.c_create_time))
 
     def run(self)->None:
         logging.info(f"run at : {datetime.today()}")
@@ -553,7 +553,7 @@ class ChronoClient:
         
         while not commands[-1] == "quit":
             print(reference, end=":")
-            ip=input().split("#")
+            ip=split_command(input())
             commands.append(ip[0])
             if commands[-1] in self.command_set.keys():
                 logging.info(msg=f"{ip}")
@@ -595,3 +595,4 @@ class ChronoStats:
         vorlesung=sum([((datetime.combine(date.today(), event.end) - datetime.combine(date.today(), event.start)).seconds/3600)*("vorlesung" in event.tags) for event in day.events])
         nvorlesung=mathe-vorlesung
         return [("Stunden Mathe", round(mathe, ndigits=3)), ("Stunden Vorlesung", round(vorlesung, ndigits=3)),("Stunden Mathe (nicht Vorlesung)", round(nvorlesung, ndigits=3)), ("Stunden Leben", round(leben, ndigits=3))]
+        

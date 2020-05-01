@@ -12,3 +12,23 @@ def write_table(f:IO, dims:List[int], data:List[List[str]]):
         f.write(reduce(lambda a,b: a+"&"+b, [data[i][j] for j in range(dims[0])])+"\\\\ \\hline\n")
     f.write("\\end{tabular}"+"\n")
     f.write("\\end{table}"+"\n")
+
+def split_command(command:str)->List[str]:
+    #Die Ecken
+    if "\"" in command:
+        s=int(command.find("\""))
+        for i in range(s+1, len(command)):
+            if command[i]=="\"":
+                if not s==0:
+                    a=split_command(command[0:s-1])
+                else:
+                    a=[]
+                b=[command[s+1:i]]
+                if not i == len(command)-1:
+                    c=split_command(command[i+2:])
+                else:
+                    c=[]
+                return a+b+c
+    else:
+        rtn= command.split(" ")
+        return list(filter(lambda l: not l=="", rtn))
