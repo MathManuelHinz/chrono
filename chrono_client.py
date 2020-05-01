@@ -7,31 +7,52 @@ import os
 import logging
 import subprocess
 import secrets
+from inspect import signature
 #todo
+#resturcture times
+#assert
+#times
 #-setup
 #project stats
 #add times to schedule?
 #check overlap
+#Fix ChronoDay
+#Fix Schedule
+#show schedule
 
 class ChronoTime:
+    """ This class should be used for very short events, such as deadlines."""
+
+    start:time
+    what:str
+    tags:List[str]
 
     def __init__(self, start:str, what:str, tags:List[str]=[]):
+        """Constructor: ChronoTime. start input will be converted to a time object, 
+        the other inputs will be used as attributes. 
+        Attributes:
+            start: Should be of the form HH:MM
+            what: Should be a reasonably short string
+            tags: Should be a list of tags, seperated by "," given as a single string"""
         self.start=time(int(start[0:2]), int(start[3:5]))
         self.what=what
         self.tags=tags
 
     def to_dict(self)->Dict[str, Union[str, List[str]]]:
+        """Used to save the object as a json."""
         d=dict()
-        d["start"]=self.start.isoformat()
+        d["start"]=self.start.isoformat() #HH:MM:SS
         d["what"]=self.what
         d["tags"]=self.tags
         return d
 
     def __repr__(self)->str:
+        """Returns a string representation of this object. Used by the command times"""
         return f"Time: {self.start}, what: {self.what}"
 
 class ChronoEvent:
-
+    """This class is used for all events which are to long for ChronoTime. 
+    The majority of events should be ChronoEvents."""
 
     start:time
     end:time
@@ -39,15 +60,27 @@ class ChronoEvent:
     tags:List[str]
 
     def __init__(self, start:str, end:str, what:str, tags:List[str]=[]):
+        """Constructor: ChronoEvent. start and end input will be converted to a time object, 
+        the other inputs will be directly used as attributes. 
+        The starting time has to be strictly before the ending time.
+        Attributes:
+            start: Should be of the format HH:MM
+            end: Should be of the format HH:MM
+            what: Should be a reasonably short string
+            tags: Should be a list of tags, seperated by "," given in the form of single string"""
+        
         self.start=time(int(start[0:2]), int(start[3:5]))
         self.end=time(int(end[0:2]), int(end[3:5]))
         self.what=what
         self.tags=tags
+        assert self.start<self.end
 
     def __repr__(self)->str:
+        """Returns a string representation of this object. Used by the command today"""
         return f"From {self.start.isoformat()} until {self.end.isoformat()} : {self.what}"
 
     def to_dict(self)->Dict[str, Union[str, List[str]]]:
+        """Used to save the object as a json."""
         d=dict()
         d["start"]=self.start.isoformat()
         d["end"]=self.end.isoformat()
@@ -57,8 +90,9 @@ class ChronoEvent:
 
 
 class ChronoDay:
-
-    
+    """This class is used to organize ChronoEvent- and  ChronoTimes-objects. 
+    Each page in the exported pdf should correspond to one ChronoDay-object."""
+     
     day_start:time
     day_end:time
     events:List[ChronoEvent]
@@ -67,42 +101,57 @@ class ChronoDay:
 
 
     def __init__(self, events:List[ChronoEvent], input_date:str,day_start:str=None, day_end:str=None):
+        """Constructor: ChronoDay. day_start and day_end input will be converted to a time object, 
+        input_date will be converted to a date object and
+        events will be saved as is. 
+        Attributes:
+            events: A list of ChronoEvents. Should be none empty if day_start, day_end are omitted, unless a schedule is used.
+            input_date: The date of the Day. Should be of the format YYYY-MM-DD
+            day_start: Optional, if events isn`t empty. Should be of the format HH:MM
+            day_end: Optional, if events isn`t empty. Should be of the format HH:MM"""
         self.events=events
         if not events == []:
             maxmin=self.get_bounds()
         if day_start == None:
             try: self.day_start=maxmin[0]
-            except: Exception("ChronoDay needs to have atleast one of the following: none empty events list, day_start")
+            except: logging.warning("ChronoDay needs to have at least one of the following: none empty events list, day_start")
         else:
             self.day_start=time(int(day_start[0:2]), int(day_start[3:5]))
         if day_end == None:
             try: self.day_end=maxmin[1]
-            except: Exception("ChronoDay needs to have atleast one of the following: none empty events list, day_end")
+            except: logging.warning("ChronoDay needs to have at least one of the following: none empty events list, day_end")
         else:
             self.day_end=time(int(day_end[0:2]), int(day_end[3:5]))
         self.date=date(int(input_date[0:4]), int(input_date[5:7]), int(input_date[8:10]))
         self.silent_events=[]
 
     def __repr__(self)->str:
+        """Returns a string representation of this object. Used by the command today"""
         if self.events == []:
             return  f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n"
         else: return f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n" + reduce(lambda a,b: a+"\n\n"+b, [event.__repr__() for event in sorted(self.events, key=lambda x: x.start)])
 
     def check_overlap(self, event1:ChronoEvent, event2:ChronoEvent)->bool:
+        """Checks if two events overlap."""
         if event1.start==event2.start:
             rtn=True 
         elif event1.start < event2.start:
             rtn= event2.start < event1.end
         else:
             rtn= event1.start < event2.end
-        if rtn:
-            print(event1, event2)
         return rtn
 
     def add_silent(self, silent_event:ChronoTime)->None:
+        """Adds a ChronoTime object to the silent_events list."""
         self.silent_events.append(silent_event)
 
     def add_event(self, event:ChronoEvent, force:bool=False)->None:
+        """
+        This function tries a event to the events list. 
+        This fails if there is an overlap with an already existing event. Adding the event can be forced by 
+        setting force to True. In this case overlapping existing events will be deleted. 
+        Adding an event may change the day_start, day_end attributes.
+        """
         if not reduce(lambda a,b: a or b, [self.check_overlap(e, event) for e in self.events], False) or self.events==[]:
             self.events.append(event)
         elif force:
@@ -120,21 +169,23 @@ class ChronoDay:
         if event.end >= ce:
             self.day_end=event.end
 
-    def fill_empty(self, what:str="Relax")->None:
-        pass
-
-    def get_overlaps(self)->List[Tuple[str, str]]:
+    def fill_empty(self, what:str="Relax")->None: #not implemented yet
+        raise NotImplementedError
         pass
 
     def get_slots(self)->List[ChronoEvent]:
+        """returns the events sorted by starting time."""
         return sorted(self.events, key=lambda x:x.start)
 
     def get_bounds(self)->Tuple[str, str]:
+        """Returns the earliest starting time and the latest ending time."""
+        assert not self.events==[]
         starts=[event.start for event in self.events]
         ends=[event.end for event in self.events]
         return min(starts), max(ends)
 
     def merge(self)->None:
+        """Merges two events into one if they have the same what attribute and no time in between them."""
         for e1 in self.events:
             for e2 in self.events:
                 if not e1==e2 and e1.end==e2.start and e1.what==e2.what:
@@ -146,6 +197,7 @@ class ChronoDay:
                     return self.merge()
 
     def to_dict(self)->Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]:
+        """Used to save the object as a json."""
         d=dict()
         d["day_start"]=self.day_start.isoformat()
         d["day_end"]=self.day_end.isoformat()
@@ -225,7 +277,7 @@ class ChronoProject:
                     pass
                 else:
                     day.merge()
-                    f.write("\\section{"+f"{day.date}"+ "}\n")
+                    f.write("\\section*{"+f"{day.date}"+ "}\n")
                     stats=ChronoStats.get_stats(day)
                     write_table(f, dims=[2, len(stats)], data=[[stat[0], str(stat[1])] for stat in stats])
                     slots=day.get_slots()
@@ -415,8 +467,9 @@ class MSSH:
     def c_times(project:ChronoProject, reference:str, days:int="1")->str:
         d=date.today()
         for _ in range(int(days)):
-            for time in project.days[d.isoformat()].silent_events:
-                print(f"{d.isoformat()} : {time}")
+            if d.isoformat() in project.days.keys():
+                for time in project.days[d.isoformat()].silent_events:
+                    print(f"{d.isoformat()} : {time}")
             d += timedelta(days=1)
         return reference
 
@@ -465,6 +518,18 @@ class ChronoClient:
                 print("no backup available")
         return reference
 
+    def c_help(self, project:ChronoProject, reference:str, cmd:str):
+        if cmd in self.command_set.keys():
+            sig=str(signature(self.command_set[cmd]))
+            sig=sig.replace("(project: chrono_client.ChronoProject, reference: str", "").replace(") -> str", "")
+            if sig[0]==",":
+                print(sig[2:])
+            else:
+                print(sig)
+        else:
+            print("unknown command")
+        return reference
+
     def __init__(self, path:str, command_set:Dict[str, Callable[[List[str]], None]]={}):
         self.path=path
         self.project=None
@@ -473,7 +538,9 @@ class ChronoClient:
         self.command_set["commands"]=self.c_commands
         self.command_set["restore"]=self.c_restore
         self.command_set["refresh"]=self.c_refresh
+        self.command_set["help"]=self.c_help
         logging.basicConfig(filename="log.txt", level=logging.INFO)
+        print(signature(MSSH.c_create_time))
 
     def run(self)->None:
         logging.info(f"run at : {datetime.today()}")
@@ -490,7 +557,10 @@ class ChronoClient:
             commands.append(ip[0])
             if commands[-1] in self.command_set.keys():
                 logging.info(msg=f"{ip}")
-                reference= self.command_set[commands[-1]](self.project, reference, *ip[1:])
+                try :reference= self.command_set[commands[-1]](self.project, reference, *ip[1:])
+                except Exception as e:
+                    logging.warning(e)
+                    print(e)
             else:
                 logging.info(msg=f"failed command: {ip}")
                 print("This command does not exist")
