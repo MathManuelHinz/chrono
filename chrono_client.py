@@ -19,6 +19,9 @@ from inspect import signature
 #Fix ChronoDay
 #Fix Schedule
 #show schedule
+#Hausarbeiten
+#adobe api
+#times / Waking up
 
 class ChronoTime:
     """ This class should be used for very short events, such as deadlines."""
@@ -324,7 +327,7 @@ class MSSH:
         return "base"
 
     @staticmethod
-    def c_create_event(project:ChronoProject, reference:str, what:str, tags:List[str]="relax", start:str="08:00", end:str="10:00", force:bool=False)->str:
+    def c_create_event(project:ChronoProject, reference:str, what:str, tags:str="relax", start:str="08:00", end:str="10:00", force:bool=False)->str:
         if reference in project.days.keys():
             try:
                 project.add_event(ChronoEvent(start=start, end=end, what=what, tags=tags.split(",")), reference, force=int(force))
@@ -473,6 +476,42 @@ class MSSH:
             d += timedelta(days=1)
         return reference
 
+    @staticmethod
+    def c_change_event_time(project:ChronoProject, reference:str, start:str, stop:str, nstart:str="08:00", nend:str="10:00")->str:
+        if reference in project.days.keys():
+            for e in project.days[reference].events:
+                if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
+                    e.start=time(int(nstart[0:2]), int(nstart[3:5]))
+                    e.end=time(int(nend[0:2]), int(nend[3:5]))
+                    return reference
+
+    @staticmethod        
+    def c_change_event_what(project:ChronoProject, reference:str, start:str, stop:str, what:str)->str:
+        if reference in project.days.keys():
+            for e in project.days[reference].events:
+                if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
+                    e.what=what
+                    return reference
+
+    @staticmethod        
+    def c_change_event_tags(project:ChronoProject, reference:str, start:str, stop:str, tags:str)->str:
+        if reference in project.days.keys():
+            for e in project.days[reference].events:
+                if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
+                    e.tags=tags.split(",")
+                    return reference
+
+    @staticmethod
+    def c_change_event(project:ChronoProject, reference:str, start:str, stop:str, mode:str, *args)->str:
+        if mode=="time":
+            return MSSH.c_change_event_time(project, reference, start, stop, *args)
+        elif mode=="what":
+            return MSSH.c_change_event_what(project, reference, start, stop, *args)
+        elif mode=="tags":
+            return MSSH.c_change_event_tags(project, reference, start, stop, *args)
+        else:
+            raise Exception("unknown mode")
+        
 MSSH_COMMS={
     "setr":MSSH.c_setr,
     "save":MSSH.c_save,
@@ -489,8 +528,12 @@ MSSH_COMMS={
     "getCurrent":MSSH.c_get_current,
     "today":MSSH.c_today,
     "day":MSSH.c_day,
+    "changeEtime":MSSH.c_change_event_time,
+    "changeEwhat":MSSH.c_change_event_what,
+    "changeEtags":MSSH.c_change_event_tags,
+    "changeEvent":MSSH.c_change_event,
     "delDay":MSSH.c_delete_day,
-    "delEvent":MSSH.c_delete_event,
+    "delEvent":MSSH.c_delete_event, 
     "end":MSSH.c_end
 }
 
@@ -505,7 +548,8 @@ class ChronoClient:
         return reference
 
     def c_refresh(self, project:ChronoProject, reference:str)->str:
-        project.schedule=ChronoSchedule("schedule.json")
+        project.save()
+        self.build_ChronoProject()
         return reference
 
     def c_restore(self, project:ChronoProject, reference:str, code:str=0)->str:
