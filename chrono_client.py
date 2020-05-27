@@ -559,7 +559,7 @@ class MSSH:
         for tag in ys.keys():
             plt.plot(xs, ys[tag], label=tag)
         if (tmp := date.today()).isoformat() in project.days.keys():
-            plt.scatter([d:=(tmp-days[0].date).days], ys[tags[0]][d], label="Today", marker="*", color="red", s=[70])
+            plt.scatter([d:=(tmp-days[0].date).days], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.show()
         return reference
