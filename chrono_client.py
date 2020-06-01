@@ -323,6 +323,12 @@ class MSSH:
     def c_setr(project:ChronoProject, reference:str, new_reference:str)->str:
         """sets the reference to var:reference."""
         if new_reference=="today":return date.today().isoformat()
+        if not new_reference in project.days.keys(): 
+            try: 
+                print("Couldn`t find reference, generating new ChronoDay.")
+                project.add_day(ChronoDay(input_date=new_reference, events=[]))
+            except:
+                print("Couldn`t find or create reference.")
         return new_reference
 
     @staticmethod
