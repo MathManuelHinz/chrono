@@ -11,6 +11,7 @@ from inspect import signature
 import matplotlib.pyplot as plt
 #todo
 #getNext
+#speed up plot_week
 #restructure times
 #assert
 #times
@@ -26,6 +27,8 @@ import matplotlib.pyplot as plt
 #docstring ausführlicher
 #tests
 #tageslücken
+
+WEEKDAYS=["Monday", "Tuesday", "Wendsday", "Thursday", "Friday","Saturday", "Sunday"]
 
 class ChronoTime:
     """ This class should be used for very short events, such as deadlines."""
@@ -550,7 +553,8 @@ class MSSH:
         days = list(sorted(project.days.values(), key=lambda x: x.date))
         for day in days:
             for tag in tags:
-                ys[tag].append(sum([((datetime.combine(date.today(), event.end) - datetime.combine(date.today(), event.start))\
+                ys[tag].append(sum([((datetime.combine(date.today(), event.end)\
+                     - datetime.combine(date.today(), event.start))\
                 .seconds/3600)*(tag in event.tags) for event in day.events]))
         ys["sum"]=[sum([ys[tag][i] for tag in tags]) for i in range(n)]
         ax=plt.subplot(111)
@@ -564,6 +568,36 @@ class MSSH:
         plt.show()
         return reference
 
+    @staticmethod
+    def c_plot_week(project:ChronoProject, reference:str, tags:str="mathe,programming,korean", k:str="7")->str:
+        """Plots the hours of var:tags and their sum."""
+        k=int(k)
+        tags=tags.split(",")
+        n=len(project.days)
+        assert not "sum" in tags
+        xs=[i for i in range(n)]
+        ys={tag:[] for tag in tags}
+        days = list(sorted(project.days.values(), key=lambda x: x.date))
+        for day in days:
+            for tag in tags:
+                ys[tag].append(sum([((datetime.combine(date.today(), event.end)\
+                     - datetime.combine(date.today(), event.start))\
+                .seconds/3600)*(tag in event.tags) for event in day.events]))
+        ys["sum"]=[sum([ys[tag][i] for tag in tags]) for i in range(n)]
+        ax=plt.subplot(111)
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        tmp = date.today()
+        d=(tmp-days[0].date).days
+        week_splice=lambda x : x[d-k:d+1]
+        for tag in ys.keys():
+            plt.plot(week_splice(xs), week_splice(ys[tag]), label=tag)
+        if tmp.isoformat() in project.days.keys():
+            plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.xticks(week_splice(xs), week_splice([WEEKDAYS[day.date.weekday()][0:3]+"." for day in days]))
+        plt.show()
+        return reference
         
 MSSH_COMMS={
     "setr":MSSH.c_setr,
@@ -588,7 +622,8 @@ MSSH_COMMS={
     "delDay":MSSH.c_delete_day,
     "delEvent":MSSH.c_delete_event, 
     "end":MSSH.c_end,
-    "plot":MSSH.c_plot_stats
+    "plot":MSSH.c_plot_stats,
+    "plotw":MSSH.c_plot_week
 }
 
 class ChronoClient:
@@ -698,5 +733,7 @@ class ChronoStats:
         leben=sum([((datetime.combine(date.today(), event.end) - datetime.combine(date.today(), event.start)).seconds/3600)*("leben" in event.tags) for event in day.events])
         vorlesung=sum([((datetime.combine(date.today(), event.end) - datetime.combine(date.today(), event.start)).seconds/3600)*("vorlesung" in event.tags) for event in day.events])
         nvorlesung=mathe-vorlesung
-        return [("Stunden Mathe", round(mathe, ndigits=3)), ("Stunden Vorlesung", round(vorlesung, ndigits=3)),("Stunden Mathe (nicht Vorlesung)", round(nvorlesung, ndigits=3)), ("Stunden Leben", round(leben, ndigits=3))]
-        
+        return [("Stunden Mathe", round(mathe, ndigits=3)),
+                ("Stunden Vorlesung", round(vorlesung, ndigits=3)),
+                ("Stunden Mathe (nicht Vorlesung)", round(nvorlesung, ndigits=3)),
+                ("Stunden Leben", round(leben, ndigits=3))]
