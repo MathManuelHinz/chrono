@@ -2,7 +2,7 @@ import json
 from typing import Dict, List, Tuple, Callable, Union
 from functools import reduce
 from datetime import datetime, time, date, timedelta
-from helper import list_to_string, write_table, split_command, get_color
+from helper import list_to_string, write_table, split_command, get_color, get_intersect
 import os
 import logging
 import subprocess
@@ -10,6 +10,7 @@ import secrets
 from inspect import signature
 import matplotlib.pyplot as plt
 #todo
+#ToDo
 #getNext
 #speed up plot_week
 #restructure times
@@ -322,8 +323,8 @@ class MSSH:
     @staticmethod
     def c_setr(project:ChronoProject, reference:str, new_reference:str)->str:
         """sets the reference to var:reference."""
-        if new_reference=="today":return date.today().isoformat()
-        if not new_reference in project.days.keys(): 
+        if new_reference=="today":new_reference=date.today().isoformat()
+        if not (new_reference in project.days.keys()): 
             try: 
                 print("Couldn`t find reference, generating new ChronoDay.")
                 project.add_day(ChronoDay(input_date=new_reference, events=[]))
@@ -562,12 +563,30 @@ class MSSH:
                 ys[tag].append(sum([((datetime.combine(date.today(), event.end)\
                      - datetime.combine(date.today(), event.start))\
                 .seconds/3600)*(tag in event.tags) for event in day.events]))
-        ys["sum"]=[sum([ys[tag][i] for tag in tags]) for i in range(n)]
+        corr=[0 for day in days]
+        for i in range(n):
+            for event in days[i].events:
+                if not (I:=get_intersect(tags, event.tags)) ==[]:
+                    corr[i] += ((datetime.combine(date.today(), event.end)\
+                     - datetime.combine(date.today(), event.start))\
+                .seconds/3600)*(len(I)-1)
+        corr=[0 for day in days]
+        for i in range(n):
+            for event in days[i].events:
+                if not (I:=get_intersect(tags, event.tags))==[]:
+                    corr[i] += ((datetime.combine(date.today(), event.end)\
+                     - datetime.combine(date.today(), event.start))\
+                .seconds/3600)*(len(I)-1)
+        ys["sum"]=[sum([ys[tag][i] for tag in tags])-corr[i] for i in range(n)] #fix here
         ax=plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
         for tag in ys.keys():
             plt.plot(xs, ys[tag], label=tag)
+        if not days == []: 
+            zeroday=days[0].date.weekday()
+            WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/len(wds) for wd in range(7)] 
+            plt.plot(xs,[WDA[day.date.weekday()] for day in days],"--",label="wda")
         if (tmp := date.today()).isoformat() in project.days.keys():
             plt.scatter([d:=(tmp-days[0].date).days], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
@@ -589,7 +608,14 @@ class MSSH:
                 ys[tag].append(sum([((datetime.combine(date.today(), event.end)\
                      - datetime.combine(date.today(), event.start))\
                 .seconds/3600)*(tag in event.tags) for event in day.events]))
-        ys["sum"]=[sum([ys[tag][i] for tag in tags]) for i in range(n)]
+        corr=[0 for day in days]
+        for i in range(n):
+            for event in days[i].events:
+                if not (I:=get_intersect(tags, event.tags))==[]:
+                    corr[i] += ((datetime.combine(date.today(), event.end)\
+                     - datetime.combine(date.today(), event.start))\
+                .seconds/3600)*(len(I)-1)
+        ys["sum"]=[sum([ys[tag][i] for tag in tags])-corr[i] for i in range(n)]
         ax=plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
@@ -598,6 +624,10 @@ class MSSH:
         week_splice=lambda x : x[d-k:d+1]
         for tag in ys.keys():
             plt.plot(week_splice(xs), week_splice(ys[tag]), label=tag)
+        if not days == []: 
+            zeroday=days[0].date.weekday()
+            WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/len(wds) for wd in range(7)] 
+            plt.plot(week_splice(xs),week_splice([WDA[day.date.weekday()] for day in days]),"--",label="wda")
         if tmp.isoformat() in project.days.keys():
             plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))

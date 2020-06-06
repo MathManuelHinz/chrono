@@ -1,6 +1,9 @@
 from typing import Dict, List, Tuple, IO
 from functools import reduce
 
+def get_intersect(l1:List, l2:List)->List:
+    return list(filter(lambda x: x in l2, l1))
+
 def get_color(scheme:Dict[str, str], tags:List[str])->str:
     for tag in tags:
         if tag in scheme.keys():
