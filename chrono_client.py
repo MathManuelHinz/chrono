@@ -9,6 +9,7 @@ import subprocess
 import secrets
 from inspect import signature
 import matplotlib.pyplot as plt
+import shutil
 #todo
 #ToDo
 #getNext
@@ -60,6 +61,7 @@ class ChronoTime:
     def __repr__(self)->str:
         """Returns a string representation of this object. Used by the command times"""
         return f"Time: {self.start}, what: {self.what}"
+
 
 class ChronoEvent:
     """This class is used for all events which are to long for ChronoTime. 
@@ -217,6 +219,7 @@ class ChronoDay:
         d["sevents"]=[event.to_dict() for event in self.silent_events]
         return d
 
+
 class ChronoSchedule:
     
     days:List[List[ChronoEvent]]
@@ -228,6 +231,28 @@ class ChronoSchedule:
         for i  in range(7):
             self.days[i]=[ChronoEvent(e["start"], e["end"], e["what"], e["tags"]) for e in data[i]]
     
+
+class ChronoNote:
+    """One bullet point on the todo list."""
+    text:str
+    dt:datetime
+
+    def __init__(self, text:str, dt:datetime=datetime.now()):
+        """Saves a text and takes dt to be the time this object gets created."""
+        self.text=text
+        self.dt=dt
+    
+    def __repr__(self)->str:
+        return self.text
+
+    def to_dict(self)->Dict[str, str]:
+        """Used to save the ChronoNote."""
+        d=dict()
+        d["text"]=self.text
+        d["datetime"]=self.dt.date().isoformat()+"_"+self.dt.time().isoformat()
+        return d
+
+
 MSSH_color_scheme:Dict[str, str]={
     "leben":"black",
     "relax":"black",
@@ -239,10 +264,12 @@ MSSH_color_scheme:Dict[str, str]={
     "korean":"magenta"
 }
 
+
 class ChronoProject:
 
     path:str
     name:str
+    todo:List[ChronoNote]
     days:Dict[str, ChronoDay]
     schedule:ChronoSchedule
 
@@ -251,8 +278,12 @@ class ChronoProject:
         self.path=path
         self.days=dict()
         self.schedule=schedule
-    
+        self.todo=[]
         self.header=["\\documentclass{article}"]
+
+    def add_note(self, note:ChronoNote):
+        assert not note in self.todo
+        self.todo.append(note)
 
     def add_day(self,day:ChronoDay)->None:
         if not day.date.isoformat() in self.days.keys():
@@ -312,11 +343,13 @@ class ChronoProject:
     def save(self, path=None)->None:
         if path == None: path=self.path
         export=dict()
+        export["todo"]=[note.to_dict() for note in self.todo]
         export["name"]=self.name
         export["path"]=path
         export["days"]={key:self.days[key].to_dict() for key in self.days.keys()}
         with open(path+".json", "w+", encoding="utf-8") as f:
             json.dump(export, f)
+
 
 class MSSH:
 
@@ -382,12 +415,6 @@ class MSSH:
     def c_mk(project:ChronoProject, reference:str, days="")->str:
         """Exports a set of days (seperated by commata) to pdf."""
         project.export_pdf([date.today().isoformat() if day=="today" else day for day in days.split(",")])
-        return reference
-
-    @staticmethod
-    def c_save(project:ChronoProject, reference:str)->str:
-        """Saves the project."""
-        project.save()
         return reference
 
     @staticmethod
@@ -634,10 +661,24 @@ class MSSH:
         plt.xticks(week_splice(xs), week_splice([WEEKDAYS[day.date.weekday()][0:3]+"." for day in days]))
         plt.show()
         return reference
-        
+
+    @staticmethod
+    def c_note(project:ChronoProject, reference:str, text:str)->str:
+        """Adds a note to the todo list."""
+        project.add_note(ChronoNote(text))
+        return reference
+
+    @staticmethod
+    def c_todo(project:ChronoProject, reference:str)->str:
+        """Prints todo list."""
+        print("Todo:")
+        for i, note in enumerate(project.todo):
+            print(str(i+1)+".: "+str(note))
+        return reference
+
+
 MSSH_COMMS={
     "setr":MSSH.c_setr,
-    "save":MSSH.c_save,
     "mkDay":MSSH.c_create_day,
     "mkEvent":MSSH.c_create_event,
     "mkTime":MSSH.c_create_time,
@@ -659,8 +700,11 @@ MSSH_COMMS={
     "delEvent":MSSH.c_delete_event, 
     "end":MSSH.c_end,
     "plot":MSSH.c_plot_stats,
-    "plotw":MSSH.c_plot_week
+    "plotw":MSSH.c_plot_week,
+    "note":MSSH.c_note,
+    "todo":MSSH.c_todo
 }
+
 
 class ChronoClient:
 
@@ -697,13 +741,19 @@ class ChronoClient:
             sig=signature(self.command_set[cmd])
             if not len(sig.parameters.keys())==2:
                 sig=str(sig).replace("(project: chrono_client.ChronoProject, reference: str", "").replace(") -> str", "")
-                print(self.command_set[cmd].__doc__)
                 print(sig[2:])
             else:
                 print(f"{cmd} takes no arguments")
+            print(self.command_set[cmd].__doc__)
         else:
             logging.info(f"unknown command : {cmd}")
             print(f"unknown command : {cmd}")
+        return reference
+
+    def c_save(self, project:ChronoProject, reference:str)->str:
+        """Saves the project."""
+        shutil.copy(project.path+".json", project.path+"_backup.json")
+        project.save()
         return reference
 
     def __init__(self, path:str, command_set:Dict[str, Callable[[List[str]], None]]={}):
@@ -715,6 +765,7 @@ class ChronoClient:
         self.command_set["restore"]=self.c_restore
         self.command_set["refresh"]=self.c_refresh
         self.command_set["help"]=self.c_help
+        self.command_set["save"]=self.c_save
         logging.basicConfig(filename="log.txt", level=logging.INFO)
 
     def run(self)->None:
@@ -746,6 +797,8 @@ class ChronoClient:
         with open(path+".json", "r+", encoding="utf-8") as f:
             d=json.load(f)
         p=ChronoProject(name=d["name"], path=d["path"])
+        for note in d["todo"]:
+            p.todo.append(ChronoNote(note["text"], datetime.fromisoformat(note["datetime"])))
         for day in d["days"].values():
             events=[ChronoEvent(start=event["start"], end=event["end"], what=event["what"], tags=event["tags"]) for event in day["events"]]
             sevents=[ChronoTime(start=event["start"], what=event["what"], tags=event["tags"]) for event in day["sevents"]]
@@ -756,6 +809,7 @@ class ChronoClient:
 
     def __repr__(self)->str:
         return self.project.__repr__()
+
 
 class ChronoStats:
     @staticmethod
