@@ -1,5 +1,11 @@
 from typing import Dict, List, Tuple, IO
 from functools import reduce
+from datetime import datetime
+
+
+def is_in(t1:datetime, b1:datetime, b2:datetime)->bool:
+    assert b1 < b2
+    return t1 >= b1 and t1 <= b2
 
 def get_intersect(l1:List, l2:List)->List:
     return list(filter(lambda x: x in l2, l1))
@@ -8,7 +14,8 @@ def get_color(scheme:Dict[str, str], tags:List[str])->str:
     for tag in tags:
         if tag in scheme.keys():
             return scheme[tag]
-    raise Exception("Scheme error")
+    print(f"Used default color for {tags}")
+    return scheme["default"]
 
 def list_to_string(data:List[str])->str:
     return reduce(lambda a,b: a+"\n"+b, data)

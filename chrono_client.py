@@ -254,6 +254,7 @@ class ChronoNote:
 
 
 MSSH_color_scheme:Dict[str, str]={
+    "default":"black",
     "leben":"black",
     "relax":"black",
     "mathe":"red",
@@ -282,8 +283,10 @@ class ChronoProject:
         self.header=["\\documentclass{article}"]
 
     def add_note(self, note:ChronoNote):
-        assert not note in self.todo
-        self.todo.append(note)
+        if not note.text in map(lambda x: x.text, self.todo):
+            self.todo.append(note)
+        else:
+            print("duplicate ChronoNote")
 
     def add_day(self,day:ChronoDay)->None:
         if not day.date.isoformat() in self.days.keys():
@@ -329,6 +332,11 @@ class ChronoProject:
                     write_table(f, [2, len(slots)], data=data)
                     write_table(f, [2, len(day.silent_events)], data=[[time.start.isoformat(), time.what] for time in day.silent_events])
                     f.write("\\clearpage")
+            f.write("\\section*{"+"ToDo:"+"}\n")
+            f.write("\\begin{enumerate}\n")
+            for note in self.todo:
+                f.write("\\item " + note.text + "\n")
+            f.write("\\end{enumerate}\n")
             f.write("\\end{document}\n")
         subprocess.run(["pdflatex", self.name+".tex"], stdout=subprocess.DEVNULL)
         subprocess.run(["pdflatex", self.name+".tex"], stdout=subprocess.DEVNULL)
@@ -676,6 +684,32 @@ class MSSH:
             print(str(i+1)+".: "+str(note))
         return reference
 
+    @staticmethod
+    def c_del_note(project:ChronoProject, reference:str, text:str)->str:
+        """Deletes the ChronoNote with the text var:text."""
+        project.todo=list(filter(lambda x: not x.text==text , project.todo))
+        return reference
+    
+    @staticmethod
+    def c_mk_ana(project:ChronoProject, reference:str, start:str="08:00", end:str="10:00", force:bool=False)->str:
+        """Creates ana event with var:start var:stop and the appropriate tags."""
+        return MSSH.c_create_event(project,reference,"Ana Aufgaben", "ana2,mathe,uni,aufgaben",start,end,force)
+    
+    @staticmethod
+    def c_mk_la(project:ChronoProject, reference:str, start:str="08:00", end:str="10:00", force:bool=False)->str:
+        """Creates la event with var:start var:stop and the appropriate tags."""
+        return MSSH.c_create_event(project,reference,"LA Aufgaben", "la2,mathe,uni,aufgaben",start,end,force)
+
+    @staticmethod
+    def c_mk_alma(project:ChronoProject, reference:str, start:str="08:00", end:str="10:00", force:bool=False)->str:
+        """Creates alma event with var:start var:stop and the appropriate tags."""
+        return MSSH.c_create_event(project,reference,"Alma Aufgaben", "alma2,mathe,uni,aufgaben",start,end,force)
+
+    @staticmethod
+    def c_mk_markov(project:ChronoProject, reference:str, start:str="08:00", end:str="10:00", force:bool=False)->str:
+        """Creates markov event with var:start var:stop and the appropriate tags."""
+        return MSSH.c_create_event(project,reference,"Markov Aufgaben", "markov,mathe,uni,seminar",start,end,force)
+
 
 MSSH_COMMS={
     "setr":MSSH.c_setr,
@@ -702,7 +736,12 @@ MSSH_COMMS={
     "plot":MSSH.c_plot_stats,
     "plotw":MSSH.c_plot_week,
     "note":MSSH.c_note,
-    "todo":MSSH.c_todo
+    "todo":MSSH.c_todo,
+    "deln":MSSH.c_del_note,
+    "mkLa":MSSH.c_mk_la,
+    "mkAna":MSSH.c_mk_ana,
+    "mkAlma":MSSH.c_mk_alma,
+    "mkMarkov":MSSH.c_mk_markov
 }
 
 
@@ -755,6 +794,7 @@ class ChronoClient:
         shutil.copy(project.path+".json", project.path+"_backup.json")
         project.save()
         return reference
+
 
     def __init__(self, path:str, command_set:Dict[str, Callable[[List[str]], None]]={}):
         self.path=path
@@ -827,3 +867,4 @@ class ChronoStats:
                 ("Stunden Vorlesung", round(vorlesung, ndigits=3)),
                 ("Stunden Mathe (nicht Vorlesung)", round(nvorlesung, ndigits=3)),
                 ("Stunden Leben", round(leben, ndigits=3))]
+
