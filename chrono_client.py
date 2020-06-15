@@ -281,8 +281,15 @@ class ChronoProject:
         self.schedule=schedule
         self.todo=[]
         self.header=["\\documentclass{article}"]
+        self.scheme=MSSH_color_scheme
+        self.load_settings()
 
-    def add_note(self, note:ChronoNote):
+    def load_settings(self)->None:
+        with open("settings.json", "r+", encoding="utf-8") as f:
+            self.settings=json.load(f)
+        self.scheme=self.settings["color_scheme"]
+
+    def add_note(self, note:ChronoNote)->None:
         if not note.text in map(lambda x: x.text, self.todo):
             self.todo.append(note)
         else:
@@ -328,7 +335,7 @@ class ChronoProject:
                     #stats=ChronoStats.get_stats(day)
                     #write_table(f, dims=[2, len(stats)], data=[[stat[0], str(stat[1])] for stat in stats])
                     slots=day.get_slots()
-                    data=[[f"{slot.start.isoformat()}-{slot.end.isoformat()}", "\\textcolor{"+get_color(MSSH_color_scheme, slot.tags)+"}{"+f"{slot.what}"+"}"]for slot in slots]
+                    data=[[f"{slot.start.isoformat()}-{slot.end.isoformat()}", "\\textcolor{"+get_color(self.scheme, slot.tags)+"}{"+f"{slot.what}"+"}"]for slot in slots]
                     write_table(f, [2, len(slots)], data=data)
                     write_table(f, [2, len(day.silent_events)], data=[[time.start.isoformat(), time.what] for time in day.silent_events])
                     f.write("\\clearpage")
@@ -689,26 +696,6 @@ class MSSH:
         """Deletes the ChronoNote with the text var:text."""
         project.todo=list(filter(lambda x: not x.text==text , project.todo))
         return reference
-    
-    @staticmethod
-    def c_mk_ana(project:ChronoProject, reference:str, start:str="08:00", end:str="10:00", force:bool=False)->str:
-        """Creates ana event with var:start var:stop and the appropriate tags."""
-        return MSSH.c_create_event(project,reference,"Ana Aufgaben", "ana2,mathe,uni,aufgaben",start,end,force)
-    
-    @staticmethod
-    def c_mk_la(project:ChronoProject, reference:str, start:str="08:00", end:str="10:00", force:bool=False)->str:
-        """Creates la event with var:start var:stop and the appropriate tags."""
-        return MSSH.c_create_event(project,reference,"LA Aufgaben", "la2,mathe,uni,aufgaben",start,end,force)
-
-    @staticmethod
-    def c_mk_alma(project:ChronoProject, reference:str, start:str="08:00", end:str="10:00", force:bool=False)->str:
-        """Creates alma event with var:start var:stop and the appropriate tags."""
-        return MSSH.c_create_event(project,reference,"Alma Aufgaben", "alma2,mathe,uni,aufgaben",start,end,force)
-
-    @staticmethod
-    def c_mk_markov(project:ChronoProject, reference:str, start:str="08:00", end:str="10:00", force:bool=False)->str:
-        """Creates markov event with var:start var:stop and the appropriate tags."""
-        return MSSH.c_create_event(project,reference,"Markov Aufgaben", "markov,mathe,uni,seminar",start,end,force)
 
 
 MSSH_COMMS={
@@ -737,11 +724,7 @@ MSSH_COMMS={
     "plotw":MSSH.c_plot_week,
     "note":MSSH.c_note,
     "todo":MSSH.c_todo,
-    "deln":MSSH.c_del_note,
-    "mkLa":MSSH.c_mk_la,
-    "mkAna":MSSH.c_mk_ana,
-    "mkAlma":MSSH.c_mk_alma,
-    "mkMarkov":MSSH.c_mk_markov
+    "deln":MSSH.c_del_note
 }
 
 
@@ -761,6 +744,7 @@ class ChronoClient:
         """Saves and rebuilds the project."""
         project.save()
         self.build_ChronoProject()
+        project.load_settings()
         return reference
 
     def c_restore(self, project:ChronoProject, reference:str, code:str=0)->str:
@@ -779,11 +763,14 @@ class ChronoClient:
         if cmd in self.command_set.keys():
             sig=signature(self.command_set[cmd])
             if not len(sig.parameters.keys())==2:
-                sig=str(sig).replace("(project: chrono_client.ChronoProject, reference: str", "").replace(") -> str", "")
+                sig=str(sig).replace("(project: chrono_client.ChronoProject, reference: str", "")\
+                    .replace(") -> str", "").replace("(p, r", "").replace(")", "")
                 print(sig[2:])
             else:
                 print(f"{cmd} takes no arguments")
-            print(self.command_set[cmd].__doc__)
+            if (cmd.replace("mk", "") in self.project.settings["mk_shortcuts"].keys()):
+                print(self.project.settings["mk_shortcuts"][cmd.replace("mk", "")][2])
+            else: print(self.command_set[cmd].__doc__)
         else:
             logging.info(f"unknown command : {cmd}")
             print(f"unknown command : {cmd}")
@@ -795,17 +782,21 @@ class ChronoClient:
         project.save()
         return reference
 
-
-    def __init__(self, path:str, command_set:Dict[str, Callable[[List[str]], None]]={}):
-        self.path=path
-        self.project=None
-        self.command_set=command_set
+    def add_commands(self)->None:
         self.command_set["quit"]=self.c_quit
         self.command_set["commands"]=self.c_commands
         self.command_set["restore"]=self.c_restore
         self.command_set["refresh"]=self.c_refresh
         self.command_set["help"]=self.c_help
         self.command_set["save"]=self.c_save
+        for key in self.project.settings["mk_shortcuts"].keys():
+            self.command_set["mk"+key]=lambda p,r,start,stop: self.command_set["mkEvent"]\
+                (p,r,self.project.settings["mk_shortcuts"][key][0],self.project.settings["mk_shortcuts"][key][1],start,stop)
+
+    def __init__(self, path:str, command_set:Dict[str, Callable[[List[str]], None]]={}):
+        self.path=path
+        self.project=None
+        self.command_set=command_set
         logging.basicConfig(filename="log.txt", level=logging.INFO)
 
     def run(self)->None:
@@ -846,6 +837,7 @@ class ChronoClient:
             for time in sevents:
                 p.days[day["date"]].add_silent(time)
         self.project=p
+        self.add_commands()
 
     def __repr__(self)->str:
         return self.project.__repr__()
