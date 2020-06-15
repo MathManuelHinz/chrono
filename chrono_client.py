@@ -6,7 +6,6 @@ from helper import list_to_string, write_table, split_command, get_color, get_in
 import os
 import logging
 import subprocess
-import secrets
 from inspect import signature
 import matplotlib.pyplot as plt
 import shutil
@@ -436,7 +435,7 @@ class MSSH:
     def c_show(project:ChronoProject, reference:str, days="")->str:
         """Exports the ChronoProject to pdf and opens the file."""
         project.export_pdf()
-        subprocess.Popen([secrets.path, "/A" ,f"nameddest={date.today().isoformat()}", project.name+".pdf"], shell=True)
+        subprocess.Popen([project.settings["pdfpath"], "/A" ,f"nameddest={date.today().isoformat()}", project.name+".pdf"], shell=True)
         return reference
 
     @staticmethod
@@ -461,7 +460,7 @@ class MSSH:
     @staticmethod
     def c_clear_future(project:ChronoProject, reference:str, code:str="0")->str:
         """Clears all days in the future if the var:code is correct."""
-        if code == "42279":
+        if code==project.settings["code"]:
             project.save(path="backup") 
             keys=[]
             for key in project.days.keys():
@@ -749,7 +748,7 @@ class ChronoClient:
 
     def c_restore(self, project:ChronoProject, reference:str, code:str=0)->str:
         """Restores a project from a backup."""
-        if code== "42279":
+        if code==project.settings["code"]:
             tmp=project.path
             if os.path.isfile("backup.json"):
                 self.build_ChronoProject(path="backup")
