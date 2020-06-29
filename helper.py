@@ -1,7 +1,6 @@
 from typing import Dict, List, Tuple, IO
 from functools import reduce
-from datetime import datetime
-
+from datetime import datetime, date
 
 def is_in(t1:datetime, b1:datetime, b2:datetime)->bool:
     assert b1 < b2

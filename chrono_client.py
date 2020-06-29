@@ -601,16 +601,10 @@ class MSSH:
         days = list(sorted(project.days.values(), key=lambda x: x.date))
         for day in days:
             for tag in tags:
-                ys[tag].append(sum([((datetime.combine(date.today(), event.end)\
-                     - datetime.combine(date.today(), event.start))\
-                .seconds/3600)*(tag in event.tags) for event in day.events]))
+                ys[tag].append(get_time(day, tag))
         corr=[0 for day in days]
         for i in range(n):
-            for event in days[i].events:
-                if not (I:=get_intersect(tags, event.tags)) ==[]:
-                    corr[i] += ((datetime.combine(date.today(), event.end)\
-                     - datetime.combine(date.today(), event.start))\
-                .seconds/3600)*(len(I)-1)
+           corr[i]=get_intersect_sum(days[i], tags)
         corr=[0 for day in days]
         for i in range(n):
             for event in days[i].events:
@@ -646,16 +640,10 @@ class MSSH:
         days = list(sorted(project.days.values(), key=lambda x: x.date))
         for day in days:
             for tag in tags:
-                ys[tag].append(sum([((datetime.combine(date.today(), event.end)\
-                     - datetime.combine(date.today(), event.start))\
-                .seconds/3600)*(tag in event.tags) for event in day.events]))
+                ys[tag].append(get_time(day, tag))
         corr=[0 for day in days]
         for i in range(n):
-            for event in days[i].events:
-                if not (I:=get_intersect(tags, event.tags))==[]:
-                    corr[i] += ((datetime.combine(date.today(), event.end)\
-                     - datetime.combine(date.today(), event.start))\
-                .seconds/3600)*(len(I)-1)
+            corr[i]=get_intersect_sum(days[i], tags)
         ys["sum"]=[sum([ys[tag][i] for tag in tags])-corr[i] for i in range(n)]
         ax=plt.subplot(111)
         box = ax.get_position()
@@ -696,6 +684,20 @@ class MSSH:
         project.todo=list(filter(lambda x: not x.text==text , project.todo))
         return reference
 
+    @staticmethod
+    def c_stats(project:ChronoProject, reference:str, tags:str)->str:
+        """Displays stats for given tags."""
+        tags=tags.split(",")
+        hours=[]
+        days=list(project.days.values())
+        for tag in tags:
+            hours=[]
+            for day in days:
+                hours.append(get_time(day, tag))
+            rest=restrict(days,hours, 7)
+            print(f"{tag}: Daily Avg (hours): {sum(hours)/len(hours)},"+f"this week: {sum(rest)/len(rest)} hours")
+        return reference
+
 
 MSSH_COMMS={
     "setr":MSSH.c_setr,
@@ -723,7 +725,8 @@ MSSH_COMMS={
     "plotw":MSSH.c_plot_week,
     "note":MSSH.c_note,
     "todo":MSSH.c_todo,
-    "deln":MSSH.c_del_note
+    "deln":MSSH.c_del_note,
+    "stats":MSSH.c_stats
 }
 
 
@@ -789,8 +792,8 @@ class ChronoClient:
         self.command_set["help"]=self.c_help
         self.command_set["save"]=self.c_save
         for key in self.project.settings["mk_shortcuts"].keys():
-            self.command_set["mk"+key]=lambda p,r,start,stop: self.command_set["mkEvent"]\
-                (p,r,self.project.settings["mk_shortcuts"][key][0],self.project.settings["mk_shortcuts"][key][1],start,stop)
+            nk="mk"+key
+            self.command_set[nk]=lambda p,r,start,stop,what=self.project.settings["mk_shortcuts"][key][0],tags=self.project.settings["mk_shortcuts"][key][1]: self.command_set["mkEvent"](p,r,what,tags,start,stop)
 
     def __init__(self, path:str, command_set:Dict[str, Callable[[List[str]], None]]={}):
         self.path=path
@@ -859,3 +862,24 @@ class ChronoStats:
                 ("Stunden Mathe (nicht Vorlesung)", round(nvorlesung, ndigits=3)),
                 ("Stunden Leben", round(leben, ndigits=3))]
 
+def get_time(day:ChronoDay, tag:str)->float:
+    return sum([((datetime.combine(date.today(), event.end)\
+                     - datetime.combine(date.today(), event.start))\
+                .seconds/3600)*(tag in event.tags) for event in day.events])
+
+def get_intersect_sum(day:ChronoDay, tags:List[str])->float:
+    overhead=0
+    for event in day.events:
+        if not (I:=get_intersect(tags, event.tags))==[]:
+            overhead += ((datetime.combine(date.today(), event.end)\
+                - datetime.combine(date.today(), event.start))\
+        .seconds/3600)*(len(I)-1)
+    return overhead
+
+def restrict(days:List[ChronoDay], coupling:List[float], width:int)->List[ChronoDay]:
+    tmp = date.today()
+    rtn=[]
+    for i, day in enumerate(days):
+        if (tmp-day.date).days<=width:
+            rtn.append(coupling[i])
+    return rtn
