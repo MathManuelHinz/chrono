@@ -1,14 +1,18 @@
 import json
-from typing import Dict, List, Tuple, Callable, Union
-from functools import reduce
-from datetime import datetime, time, date, timedelta
-from helper import list_to_string, write_table, split_command, get_color, get_intersect
-import os
 import logging
-import subprocess
-from inspect import signature
-import matplotlib.pyplot as plt
+import os
 import shutil
+import subprocess
+from datetime import date, datetime, time, timedelta
+from functools import reduce
+from inspect import signature
+from typing import Callable, Dict, List, Tuple, Union
+
+import matplotlib.pyplot as plt
+
+from helper import (get_color, get_intersect, list_to_string, split_command,
+                    write_table)
+
 #todo
 #ToDo
 #getNext
@@ -100,6 +104,61 @@ class ChronoEvent:
         d["tags"]=self.tags
         return d
 
+class ChronoSportEvent:
+    def to_dict(self):
+        pass
+
+class ChronoRunningEvent(ChronoSportEvent):
+    def __init__(self, run_time:float, distance:float, start_time:time):
+        self.time=run_time
+        self.distance=distance
+        self.start_time=start_time
+
+    def __repr__(self)->str:
+        return f"time:{self.time}, distance:{self.distance},start_time:{self.start_time}"
+
+    def to_dict(self)->Dict[str, float]:
+        iso=self.start_time.isoformat()
+        return {"time":self.time,"distance":self.distance,"start_time":iso[0:2]+":"+iso[3:5]}
+
+class ChronoPushUpEvent(ChronoSportEvent):
+    def __init__(self, p_times:List[float], p_mults:List[int], start_time:time):
+        self.times=p_times #how long
+        self.mults=p_mults #how many
+        self.start_time=start_time #when
+
+    def __repr__(self)->str:
+        return f"times:{self.times}, mults:{self.mults},start_time:{self.start_time}"
+
+    def to_dict(self)->Dict[str, float]:
+        iso=self.start_time.isoformat()
+        return {"times":self.times,"mults":self.mults,"start_time":iso[0:2]+":"+iso[3:5]}
+
+class ChronoSitUpsEvent(ChronoSportEvent):
+    def __init__(self, p_times:float, mult:int, start_time:time):
+        self.time=p_times #how long
+        self.mult=mult #how many
+        self.start_time=start_time #when
+
+    def __repr__(self)->str:
+        return f"time:{self.time}, mult:{self.mult},start_time:{self.start_time}"
+
+    def to_dict(self)->Dict[str, float]:
+        iso=self.start_time.isoformat()
+        return {"time":self.time,"mult":self.mult,"start_time":iso[0:2]+":"+iso[3:5]}
+
+class ChronoPlankEvent(ChronoSportEvent):
+    def __init__(self, times:float, start_time:time):
+        self.time=times #how long
+        self.start_time=start_time #when
+
+    def __repr__(self)->str:
+        return f"time:{self.time},start_time:{self.start_time}"
+
+    def to_dict(self)->Dict[str, float]:
+        iso=self.start_time.isoformat()
+        return {"time":self.time,"start_time":iso[0:2]+":"+iso[3:5]}
+
 
 class ChronoDay:
     """This class is used to organize ChronoEvent- and  ChronoTimes-objects. 
@@ -110,6 +169,7 @@ class ChronoDay:
     events:List[ChronoEvent]
     date:date
     silent_events:List[ChronoTime]
+    sport:Dict[str, ChronoSportEvent]
 
 
     def __init__(self, events:List[ChronoEvent], input_date:str,day_start:str=None, day_end:str=None):
@@ -136,6 +196,7 @@ class ChronoDay:
             self.day_end=time(int(day_end[0:2]), int(day_end[3:5]))
         self.date=date(int(input_date[0:4]), int(input_date[5:7]), int(input_date[8:10]))
         self.silent_events=[]
+        self.sport={"runs":[],"pushups":[],"planks":[],"situps":[]}
 
     def __repr__(self)->str:
         """Returns a string representation of this object. Used by the command today"""
@@ -216,8 +277,20 @@ class ChronoDay:
         d["date"]=self.date.__str__()
         d["events"]=[event.to_dict() for event in self.events]
         d["sevents"]=[event.to_dict() for event in self.silent_events]
+        d["sport"]={key:[entry.to_dict() for entry in self.sport[key]] for key in self.sport.keys()}
         return d
 
+    def add_run(self, run:ChronoRunningEvent):
+        self.sport["runs"].append(run)
+
+    def add_situp(self, sit:ChronoSitUpsEvent):
+        self.sport["situps"].append(sit)
+
+    def add_pushup(self, pu:ChronoPushUpEvent):
+        self.sport["pushups"].append(pu)
+
+    def add_plank(self, plank:ChronoPlankEvent):
+        self.sport["planks"].append(plank)
 
 class ChronoSchedule:
     
@@ -698,6 +771,27 @@ class MSSH:
             print(f"{tag}: Daily Avg (hours): {sum(hours)/len(hours)},"+f"this week: {sum(rest)/len(rest)} hours")
         return reference
 
+    @staticmethod
+    def c_add_run(project:ChronoProject, reference:str, start_time:str, run_time:str, distance:str)->str:
+        project.days[date.today().isoformat()].add_run(ChronoRunningEvent(float(run_time),float(distance),time(int(start_time[0:2]), int(start_time[4:]))))
+        return reference
+
+    @staticmethod
+    def c_add_situp(project:ChronoProject, reference:str, start_time:str, situp_time:str, mult:str)->str:
+        project.days[date.today().isoformat()].add_situp(ChronoSitUpsEvent(float(situp_time),int(mult),time(int(start_time[0:2]), int(start_time[4:]))))
+        return reference
+
+    @staticmethod
+    def c_add_plank(project:ChronoProject, reference:str, start_time:str, p_time:str)->str:
+        project.days[date.today().isoformat()].add_plank(ChronoPlankEvent(float(p_time),time(int(start_time[0:2]), int(start_time[4:]))))
+        return reference
+
+    @staticmethod
+    def c_add_pushup(project:ChronoProject, reference:str, start_time:str, times:str, mults:str)->str:
+        times=[float(time) for time in times.split(",")]
+        mults=[int(mult) for mult in mults.split(",")]
+        project.days[date.today().isoformat()].add_pushup(ChronoPushUpEvent(times,mults,time(int(start_time[0:2]), int(start_time[4:]))))
+        return reference
 
 MSSH_COMMS={
     "setr":MSSH.c_setr,
@@ -726,7 +820,11 @@ MSSH_COMMS={
     "note":MSSH.c_note,
     "todo":MSSH.c_todo,
     "deln":MSSH.c_del_note,
-    "stats":MSSH.c_stats
+    "stats":MSSH.c_stats,
+    "addRun":MSSH.c_add_run,
+    "addSitup":MSSH.c_add_situp,
+    "addPushup":MSSH.c_add_pushup,
+    "addPlank":MSSH.c_add_plank
 }
 
 
@@ -835,9 +933,18 @@ class ChronoClient:
         for day in d["days"].values():
             events=[ChronoEvent(start=event["start"], end=event["end"], what=event["what"], tags=event["tags"]) for event in day["events"]]
             sevents=[ChronoTime(start=event["start"], what=event["what"], tags=event["tags"]) for event in day["sevents"]]
+            sport={sport:day["sport"][sport] for sport in day["sport"].keys()}
             p.add_day(ChronoDay(events=events, input_date=day["date"], day_start=day["day_start"], day_end=day["day_end"]))
-            for time in sevents:
-                p.days[day["date"]].add_silent(time)
+            for ctime in sevents:
+                p.days[day["date"]].add_silent(ctime)
+            for run in sport["runs"]:
+                p.days[day["date"]].add_run(ChronoRunningEvent(run["time"],run["distance"],time(int(run["start_time"][0:2]),int(run["start_time"][3:5]))))
+            for situp in sport["situps"]:
+                p.days[day["date"]].add_situp(ChronoSitUpsEvent(situp["time"],situp["mult"],time(int(situp["start_time"][0:2]),int(situp["start_time"][3:5]))))
+            for plank in sport["planks"]:
+                p.days[day["date"]].add_plank(ChronoPlankEvent(plank["time"],time(int(plank["start_time"][0:2]),int(plank["start_time"][3:5]))))
+            for pushup in sport["pushups"]:
+                p.days[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time(int(pushup["start_time"][0:2]),int(pushup["start_time"][3:5]))))
         self.project=p
         self.add_commands()
 
