@@ -738,9 +738,9 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_note(project:ChronoProject, reference:str, text:str)->str:
+    def c_note(project:ChronoProject, reference:str, text:str, *texts:Tuple[str])->str:
         """Adds a note to the todo list."""
-        project.add_note(ChronoNote(text))
+        project.add_note(ChronoNote(reduce(lambda a,b:a+" "+b, [text]+list(texts))))
         return reference
 
     @staticmethod
@@ -773,24 +773,28 @@ class MSSH:
 
     @staticmethod
     def c_add_run(project:ChronoProject, reference:str, start_time:str, run_time:str, distance:str)->str:
-        project.days[date.today().isoformat()].add_run(ChronoRunningEvent(float(run_time),float(distance),time(int(start_time[0:2]), int(start_time[4:]))))
+        """Adds a ChronoRunEvent based on:"""
+        project.days[date.today().isoformat()].add_run(ChronoRunningEvent(float(run_time),float(distance),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_add_situp(project:ChronoProject, reference:str, start_time:str, situp_time:str, mult:str)->str:
-        project.days[date.today().isoformat()].add_situp(ChronoSitUpsEvent(float(situp_time),int(mult),time(int(start_time[0:2]), int(start_time[4:]))))
+        """Adds a ChronoSitUpsEvent based on:"""
+        project.days[reference].add_situp(ChronoSitUpsEvent(float(situp_time),int(mult),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_add_plank(project:ChronoProject, reference:str, start_time:str, p_time:str)->str:
-        project.days[date.today().isoformat()].add_plank(ChronoPlankEvent(float(p_time),time(int(start_time[0:2]), int(start_time[4:]))))
+        """Adds a ChronoPlankEvent based on:"""
+        project.days[reference].add_plank(ChronoPlankEvent(float(p_time),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_add_pushup(project:ChronoProject, reference:str, start_time:str, times:str, mults:str)->str:
+        """Adds a ChronoPushUpEvent based on:"""
         times=[float(time) for time in times.split(",")]
         mults=[int(mult) for mult in mults.split(",")]
-        project.days[date.today().isoformat()].add_pushup(ChronoPushUpEvent(times,mults,time(int(start_time[0:2]), int(start_time[4:]))))
+        project.days[reference].add_pushup(ChronoPushUpEvent(times,mults,time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
 MSSH_COMMS={
