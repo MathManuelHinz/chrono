@@ -700,6 +700,8 @@ class MSSH:
         if (tmp := date.today()).isoformat() in project.days.keys():
             plt.scatter([d:=(tmp-days[0].date).days], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.xlabel("Tage")
+        plt.ylabel("Stunden")
         plt.show()
         return reference
 
@@ -736,6 +738,8 @@ class MSSH:
             plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xticks(week_splice(xs), week_splice([WEEKDAYS[day.date.weekday()][0:3]+"." for day in days]))
+        plt.xlabel("Tage")
+        plt.ylabel("Stunden")
         plt.show()
         return reference
 
