@@ -569,7 +569,9 @@ class MSSH:
     def c_today(project:ChronoProject, reference:str)->str:
         """Prints the plan for today."""
         if date.today().isoformat() in project.days.keys():
-            print(project.days[date.today().isoformat()])
+            cr=date.today().isoformat()
+            project.days[cr].merge()
+            print(project.days[cr])
         else:
             print("no plan for today")
         return reference
@@ -752,8 +754,9 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_del_note(project:ChronoProject, reference:str, text:str)->str:
+    def c_del_note(project:ChronoProject, reference:str, text:str,*texts:Tuple[str])->str:
         """Deletes the ChronoNote with the text var:text."""
+        text=reduce(lambda a,b:a+" "+b, [text]+list(texts))
         project.todo=list(filter(lambda x: not x.text==text , project.todo))
         return reference
 
@@ -797,6 +800,13 @@ class MSSH:
         project.days[reference].add_pushup(ChronoPushUpEvent(times,mults,time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
+    @staticmethod
+    def c_merge(project:ChronoProject, reference:str)->str:
+        """Merges all adjacent Events with the same var:what iff event1.end==event.start."""
+        for day in project.days.values():
+            day.merge()
+        return reference
+
 MSSH_COMMS={
     "setr":MSSH.c_setr,
     "mkDay":MSSH.c_create_day,
@@ -822,13 +832,14 @@ MSSH_COMMS={
     "plot":MSSH.c_plot_stats,
     "plotw":MSSH.c_plot_week,
     "note":MSSH.c_note,
-    "todo":MSSH.c_todo,
+    "notes":MSSH.c_todo,
     "deln":MSSH.c_del_note,
     "stats":MSSH.c_stats,
     "addRun":MSSH.c_add_run,
     "addSitup":MSSH.c_add_situp,
     "addPushup":MSSH.c_add_pushup,
-    "addPlank":MSSH.c_add_plank
+    "addPlank":MSSH.c_add_plank,
+    "merge":MSSH.c_merge
 }
 
 
