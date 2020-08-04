@@ -11,7 +11,7 @@ from typing import Callable, Dict, List, Tuple, Union
 import matplotlib.pyplot as plt
 
 from helper import (get_color, get_intersect, list_to_string, split_command,
-                    write_table)
+                    write_table,get_seconds)
 
 #todo
 #ToDo
@@ -437,6 +437,15 @@ class ChronoProject:
         with open(path+".json", "w+", encoding="utf-8") as f:
             json.dump(export, f)
 
+    def get_poi(self):
+        poi=set()
+        for day in self.days.values():
+            for event in day.events:
+                #poi.add(event.start.hour*3600+event.start.minute*60+event.start.second)
+                #poi.add(event.end.hour*3600+event.end.minute*60+event.end.second)
+                poi.add(event.start)
+                poi.add(event.end)
+        return poi
 
 class MSSH:
 
@@ -811,6 +820,24 @@ class MSSH:
             day.merge()
         return reference
 
+    @staticmethod
+    def c_heatmap(project:ChronoProject, reference:str, tag:str)->str:
+        c=24*60*60 
+        poi=list(project.get_poi())
+        poi.sort()
+        timeframes=[(poi[i],poi[i+1]) for i in range(len(poi)-1)]
+        events=list(filter(lambda a: tag in a[0].tags, reduce(lambda a,b: a+b, [[(event,day.date) for event in day.events]for day in project.days.values()])))
+        heatmap=[[sum([1 for event in events if check_in_timeframe(tf, event[0]) and event[1].weekday()==i]) for tf in timeframes for _ in range(get_tf_length(tf))] for i in range(7)]
+        heatmap=list(zip(*heatmap))
+        plt.imshow(heatmap, cmap="hot",interpolation="nearest", aspect=14/c)
+        plt.xticks([i for i in range(7)], map(lambda x: x[:3],WEEKDAYS))
+        tfl=len(timeframes)
+        min_sec=min([get_seconds(poi[i]) for i in range(tfl)])
+        plt.yticks([get_seconds(poi[i])-min_sec for i in range(tfl)], [str(poi[i]) for i in range(tfl)])
+        plt.colorbar()
+        plt.show()
+        return reference
+
 MSSH_COMMS={
     "setr":MSSH.c_setr,
     "mkDay":MSSH.c_create_day,
@@ -843,7 +870,8 @@ MSSH_COMMS={
     "addSitup":MSSH.c_add_situp,
     "addPushup":MSSH.c_add_pushup,
     "addPlank":MSSH.c_add_plank,
-    "merge":MSSH.c_merge
+    "merge":MSSH.c_merge,
+    "heatmap":MSSH.c_heatmap
 }
 
 
@@ -1009,3 +1037,13 @@ def restrict(days:List[ChronoDay], coupling:List[float], width:int)->List[Chrono
         if (tmp-day.date).days<=width:
             rtn.append(coupling[i])
     return rtn
+
+def check_in_timeframe(tf:Tuple[time, time], event:ChronoEvent)->bool:
+    return (tf[0]<= event.start and event.start < tf[1]) or (tf[0]< event.end and event.end <= tf[1])# \
+            #or (event.start <= tf[0] and tf[0]<=event.end) or (event.start <= tf[1] and tf[1]<=event.end) Unnötig, weil tfs schon so fein wie nötig ist.
+
+def get_tf_length(tf:Tuple[time, time])->int:
+    return (tf[1].hour-tf[0].hour)*60*60+(tf[1].minute-tf[0].minute)*60+(tf[1].second-tf[0].second)
+
+def fill_heatmap(heatmap:List[List[int]],tfs:List[Tuple[time,time]])->List[List[int]]:
+    pass

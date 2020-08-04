@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple, IO
 from functools import reduce
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 def is_in(t1:datetime, b1:datetime, b2:datetime)->bool:
     assert b1 < b2
@@ -48,3 +48,6 @@ def split_command(command:str)->List[str]:
     else:
         rtn= command.split(" ")
         return list(filter(lambda l: not l=="", rtn))
+
+def get_seconds(t:time):
+    return t.second + t.minute*60 + t.hour*60*60
