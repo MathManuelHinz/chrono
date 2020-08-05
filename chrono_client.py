@@ -6,7 +6,7 @@ import subprocess
 from datetime import date, datetime, time, timedelta
 from functools import reduce
 from inspect import signature
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union,Set
 
 import matplotlib.pyplot as plt
 
@@ -342,19 +342,23 @@ class ChronoProject:
 
     path:str
     name:str
+    restriction:Tuple[date,date]
     todo:List[ChronoNote]
-    days:Dict[str, ChronoDay]
+    __days:Dict[str, ChronoDay]
     schedule:ChronoSchedule
 
     def __init__(self, name:str, path:str, schedule:ChronoSchedule=None):
         self.name=name
         self.path=path
-        self.days=dict()
+        self.__days=dict()
         self.schedule=schedule
         self.todo=[]
         self.header=["\\documentclass{article}"]
         self.scheme=MSSH_color_scheme
         self.load_settings()
+        start_date=date(int(self.settings["restriction"][0][:4]),int(self.settings["restriction"][0][5:7]),int(self.settings["restriction"][0][8:10]))
+        end_date=date(int(self.settings["restriction"][1][:4]),int(self.settings["restriction"][1][5:7]),int(self.settings["restriction"][1][8:10]))
+        self.restriction=(start_date, end_date)
 
     def load_settings(self)->None:
         with open("settings.json", "r+", encoding="utf-8") as f:
@@ -368,27 +372,27 @@ class ChronoProject:
             print("duplicate ChronoNote")
 
     def add_day(self,day:ChronoDay)->None:
-        if not day.date.isoformat() in self.days.keys():
+        if not day.date.isoformat() in self.__days.keys():
             if not self.schedule == None:
                 day.events += self.schedule.days[day.date.weekday()]
                 day.day_start, day.day_end = day.get_bounds()
-            self.days[day.date.isoformat()]=day
+            self.__days[day.date.isoformat()]=day
         else:
             logging.warning(f"can`t add day {day.date.isoformat()}")
 
     def add_event(self, event:ChronoEvent, date:str, force:bool=False)->None:
-        self.days[date].add_event(event, force)
+        self.__days[date].add_event(event, force)
 
     def __repr__(self)->str:
-        return reduce(lambda a,b: a+"\n"+b, [day.__repr__() for day in self.days.values()])
+        return reduce(lambda a,b: a+"\n"+b, [day.__repr__() for day in self.__days.values()])
 
     def get_meta(self)->List[str]:
         return ["\\title{" + f"{self.name}"+"}"]
 
     def export_pdf(self, days=[""])->int:
         if days==[""]:
-            days=[day for day in self.days.keys()]
-        days=[self.days[key] for key in filter(lambda x: x in self.days.keys(), days)]
+            days=[day for day in self.get_days().keys()]
+        days=[self.get_days()[key] for key in filter(lambda x: x in self.get_days().keys(), days)]
         header=["\\documentclass{article}", "\\usepackage{xcolor}","\\usepackage{hyperref}"]
         with open(self.name+".tex", "w+", encoding="utf-8") as f:
             f.write(list_to_string(header)+"\n"+list_to_string(self.get_meta())+"\n")
@@ -433,13 +437,13 @@ class ChronoProject:
         export["todo"]=[note.to_dict() for note in self.todo]
         export["name"]=self.name
         export["path"]=path
-        export["days"]={key:self.days[key].to_dict() for key in self.days.keys()}
+        export["days"]={key:self.__days[key].to_dict() for key in self.__days.keys()}
         with open(path+".json", "w+", encoding="utf-8") as f:
             json.dump(export, f)
 
-    def get_poi(self):
+    def get_poi(self)->Set[time]:
         poi=set()
-        for day in self.days.values():
+        for day in self.get_days().values():
             for event in day.events:
                 #poi.add(event.start.hour*3600+event.start.minute*60+event.start.second)
                 #poi.add(event.end.hour*3600+event.end.minute*60+event.end.second)
@@ -447,13 +451,17 @@ class ChronoProject:
                 poi.add(event.end)
         return poi
 
+    def get_days(self)->Dict[str, ChronoDay]:
+        if self.settings["restriction"]==None: return self.__days
+        else:return {key:self.__days[key] for key in self.__days.keys() if self.restriction[0]<=self.__days[key].date and self.__days[key].date <=self.restriction[1]}
+
 class MSSH:
 
     @staticmethod
     def c_setr(project:ChronoProject, reference:str, new_reference:str)->str:
         """sets the reference to var:reference."""
         if new_reference=="today":new_reference=date.today().isoformat()
-        if not (new_reference in project.days.keys()): 
+        if not (new_reference in project.get_days.keys()): 
             try: 
                 print("Couldn`t find reference, generating new ChronoDay.")
                 project.add_day(ChronoDay(input_date=new_reference, events=[]))
@@ -476,7 +484,7 @@ class MSSH:
     @staticmethod
     def c_create_event(project:ChronoProject, reference:str, what:str, tags:str="relax", start:str="08:00", end:str="10:00", force:bool=False)->str:
         """Creates a ChronoEvent given:"""
-        if reference in project.days.keys():
+        if reference in project.get_days().keys():
             try:
                 project.add_event(ChronoEvent(start=start, end=end, what=what, tags=tags.split(",")), reference, force=int(force))
             except Exception as e:
@@ -490,9 +498,9 @@ class MSSH:
     @staticmethod
     def c_create_time(project:ChronoProject, reference:str, what:str, tags:str="relax", start:str="08:00")->str:
         """Creates a ChronoTime given:"""
-        if reference in project.days.keys():
+        if reference in project.get_days().keys():
             try:
-                project.days[reference].add_silent(ChronoTime(start=start,what=what, tags=tags.split(",")))
+                project.get_days()[reference].add_silent(ChronoTime(start=start,what=what, tags=tags.split(",")))
             except Exception as e:
                 print(e)
                 logging.info(e)
@@ -504,7 +512,7 @@ class MSSH:
     @staticmethod
     def c_days(project:ChronoProject, reference:str)->str:
         """Prints the days saved in this ChronoProject."""
-        print(project.days.keys())
+        print(project.get_days().keys())
         return reference
     
     @staticmethod
@@ -534,7 +542,7 @@ class MSSH:
         """Saves the project to a backup and deletes all days if the var:code is correct."""
         if code == "42279":
             project.save(path="backup") 
-            project.days={}
+            project.__days={}
         else:
             logging.warning(f"wrong code: {code}")
         return reference
@@ -545,11 +553,11 @@ class MSSH:
         if code==project.settings["code"]:
             project.save(path="backup") 
             keys=[]
-            for key in project.days.keys():
-                if project.days[key].date > date.today():
+            for key in project.get_days().keys():
+                if project.get_days()[key].date > date.today():
                     keys.append(key)
             for key in keys:
-                project.days.pop(key)
+                project.get_days().pop(key)
         else:
             logging.warning(f"wrong code: {code}")
         return reference
@@ -557,8 +565,8 @@ class MSSH:
     @staticmethod
     def c_get_current(project:ChronoProject, reference:str)->str:
         """Get the current event."""
-        if date.today().isoformat() in project.days.keys():
-            for event in project.days[date.today().isoformat()].events:
+        if date.today().isoformat() in project.get_days().keys():
+            for event in project.get_days()[date.today().isoformat()].events:
                 if event.start <= datetime.now().time()<=event.end:
                     print(event)
                     return reference
@@ -568,8 +576,8 @@ class MSSH:
     @staticmethod
     def c_get_next(project:ChronoProject, reference:str)->str:
         """G"""
-        if date.today().isoformat() in project.days.keys():
-           for slot in project.days[date.today().isoformat()].get_slots():
+        if date.today().isoformat() in project.get_days().keys():
+           for slot in project.get_days()[date.today().isoformat()].get_slots():
                print(slot)
         print("no current event")
         return reference
@@ -577,10 +585,10 @@ class MSSH:
     @staticmethod
     def c_today(project:ChronoProject, reference:str)->str:
         """Prints the plan for today."""
-        if date.today().isoformat() in project.days.keys():
+        if date.today().isoformat() in project.get_days().keys():
             cr=date.today().isoformat()
-            project.days[cr].merge()
-            print(project.days[cr])
+            project.get_days()[cr].merge()
+            print(project.get_days()[cr])
         else:
             print("no plan for today")
         return reference
@@ -588,8 +596,8 @@ class MSSH:
     @staticmethod
     def c_day(project:ChronoProject, reference:str)->str:
         """Prints the plan for the current reference."""
-        if reference in project.days.keys():
-            print(project.days[reference])
+        if reference in project.get_days().keys():
+            print(project.get_days()[reference])
         else:
             print(f"no plan for {reference}")
         return reference
@@ -597,26 +605,26 @@ class MSSH:
     @staticmethod
     def c_delete_day(project:ChronoProject, reference:str)->str:
         """Deletes the reference day."""
-        if reference in project.days.keys():
-            project.days.pop(reference)
-            print(project.days)
+        if reference in project.get_days().keys():
+            project.get_days().pop(reference)
+            print(project.get_days())
         return reference
     
     @staticmethod
     def c_delete_event(project:ChronoProject, reference:str, start:str, stop:str)->str:
         """Deletes the event."""
-        if reference in project.days.keys():
-            for event in project.days[reference].events:
+        if reference in project.get_days().keys():
+            for event in project.get_days()[reference].events:
                 if event.start.isoformat()[:5]==start and event.end.isoformat()[:5]==stop:
                     print("removed")
-                    project.days[reference].events.remove(event)
+                    project.get_days()[reference].events.remove(event)
                     return reference
         return reference
 
     @staticmethod
     def c_end(project:ChronoProject, reference:str)->str:
         """Ends the current event."""
-        for event in project.days[date.today().isoformat()].events:
+        for event in project.get_days()[date.today().isoformat()].events:
             if event.start <= datetime.now().time()<=event.end:
                 event.end=datetime.now().time()
                 return reference
@@ -628,8 +636,8 @@ class MSSH:
         """Prints the ChronoTimes of the next var:days days."""
         d=date.today()
         for _ in range(int(days)):
-            if d.isoformat() in project.days.keys():
-                for time in project.days[d.isoformat()].silent_events:
+            if d.isoformat() in project.get_days().keys():
+                for time in project.get_days()[d.isoformat()].silent_events:
                     print(f"{d.isoformat()} : {time}")
             d += timedelta(days=1)
         return reference
@@ -637,8 +645,8 @@ class MSSH:
     @staticmethod
     def c_change_event_time(project:ChronoProject, reference:str, start:str, stop:str, nstart:str="08:00", nend:str="10:00")->str:
         """Changes the timeframe of a ChronoEvent."""
-        if reference in project.days.keys():
-            for e in project.days[reference].events:
+        if reference in project.get_days().keys():
+            for e in project.get_days()[reference].events:
                 if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
                     e.start=time(int(nstart[0:2]), int(nstart[3:5]))
                     e.end=time(int(nend[0:2]), int(nend[3:5]))
@@ -647,8 +655,8 @@ class MSSH:
     @staticmethod        
     def c_change_event_what(project:ChronoProject, reference:str, start:str, stop:str, what:str)->str:
         """Changes the what of a ChronoEvent."""
-        if reference in project.days.keys():
-            for e in project.days[reference].events:
+        if reference in project.get_days().keys():
+            for e in project.get_days()[reference].events:
                 if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
                     e.what=what
                     return reference
@@ -656,8 +664,8 @@ class MSSH:
     @staticmethod        
     def c_change_event_tags(project:ChronoProject, reference:str, start:str, stop:str, tags:str)->str:
         """Changes the tags of a ChronoEvent."""
-        if reference in project.days.keys():
-            for e in project.days[reference].events:
+        if reference in project.get_days().keys():
+            for e in project.get_days()[reference].events:
                 if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
                     e.tags=tags.split(",")
                     return reference
@@ -678,11 +686,11 @@ class MSSH:
     def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe,programming")->str:
         """Plots the hours of var:tags and their sum."""
         tags=tags.split(",")
-        n=len(project.days)
+        n=len(project.get_days())
         assert not "sum" in tags
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
-        days = list(sorted(project.days.values(), key=lambda x: x.date))
+        days = list(sorted(project.get_days().values(), key=lambda x: x.date))
         for day in days:
             for tag in tags:
                 ys[tag].append(get_time(day, tag))
@@ -706,7 +714,7 @@ class MSSH:
             zeroday=days[0].date.weekday()
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/len(wds) for wd in range(7)] 
             plt.plot(xs,[WDA[day.date.weekday()] for day in days],"--",label="wda")
-        if (tmp := date.today()).isoformat() in project.days.keys():
+        if (tmp := date.today()).isoformat() in project.get_days().keys():
             plt.scatter([d:=(tmp-days[0].date).days], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xlabel("Tage")
@@ -719,11 +727,11 @@ class MSSH:
         """Plots the hours of var:tags and their sum."""
         k=int(k)
         tags=tags.split(",")
-        n=len(project.days)
+        n=len(project.get_days())
         assert not "sum" in tags
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
-        days = list(sorted(project.days.values(), key=lambda x: x.date))
+        days = list(sorted(project.get_days().values(), key=lambda x: x.date))
         for day in days:
             for tag in tags:
                 ys[tag].append(get_time(day, tag))
@@ -743,7 +751,7 @@ class MSSH:
             zeroday=days[0].date.weekday()
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/len(wds) for wd in range(7)] 
             plt.plot(week_splice(xs),week_splice([WDA[day.date.weekday()] for day in days]),"--",label="wda")
-        if tmp.isoformat() in project.days.keys():
+        if tmp.isoformat() in project.get_days().keys():
             plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xticks(week_splice(xs), week_splice([WEEKDAYS[day.date.weekday()][0:3]+"." for day in days]))
@@ -778,7 +786,7 @@ class MSSH:
         """Displays stats for given tags."""
         tags=tags.split(",")
         hours=[]
-        days=list(project.days.values())
+        days=list(project.get_days().values())
         for tag in tags:
             hours=[]
             for day in days:
@@ -790,19 +798,19 @@ class MSSH:
     @staticmethod
     def c_add_run(project:ChronoProject, reference:str, start_time:str, run_time:str, distance:str)->str:
         """Adds a ChronoRunEvent based on:"""
-        project.days[date.today().isoformat()].add_run(ChronoRunningEvent(float(run_time),float(distance),time(int(start_time[0:2]), int(start_time[3:]))))
+        project.get_days()[date.today().isoformat()].add_run(ChronoRunningEvent(float(run_time),float(distance),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_add_situp(project:ChronoProject, reference:str, start_time:str, situp_time:str, mult:str)->str:
         """Adds a ChronoSitUpsEvent based on:"""
-        project.days[reference].add_situp(ChronoSitUpsEvent(float(situp_time),int(mult),time(int(start_time[0:2]), int(start_time[3:]))))
+        project.get_days()[reference].add_situp(ChronoSitUpsEvent(float(situp_time),int(mult),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_add_plank(project:ChronoProject, reference:str, start_time:str, p_time:str)->str:
         """Adds a ChronoPlankEvent based on:"""
-        project.days[reference].add_plank(ChronoPlankEvent(float(p_time),time(int(start_time[0:2]), int(start_time[3:]))))
+        project.get_days()[reference].add_plank(ChronoPlankEvent(float(p_time),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
@@ -810,13 +818,13 @@ class MSSH:
         """Adds a ChronoPushUpEvent based on:"""
         times=[float(time) for time in times.split(",")]
         mults=[int(mult) for mult in mults.split(",")]
-        project.days[reference].add_pushup(ChronoPushUpEvent(times,mults,time(int(start_time[0:2]), int(start_time[3:]))))
+        project.get_days()[reference].add_pushup(ChronoPushUpEvent(times,mults,time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_merge(project:ChronoProject, reference:str)->str:
         """Merges all adjacent Events with the same var:what iff event1.end==event.start."""
-        for day in project.days.values():
+        for day in project.get_days().values():
             day.merge()
         return reference
 
@@ -826,7 +834,7 @@ class MSSH:
         poi=list(project.get_poi())
         poi.sort()
         timeframes=[(poi[i],poi[i+1]) for i in range(len(poi)-1)]
-        events=list(filter(lambda a: tag in a[0].tags, reduce(lambda a,b: a+b, [[(event,day.date) for event in day.events]for day in project.days.values()])))
+        events=list(filter(lambda a: tag in a[0].tags, reduce(lambda a,b: a+b, [[(event,day.date) for event in day.events]for day in project.get_days().values()])))
         heatmap=[[sum([1 for event in events if check_in_timeframe(tf, event[0]) and event[1].weekday()==i]) for tf in timeframes for _ in range(get_tf_length(tf))] for i in range(7)]
         heatmap=list(zip(*heatmap))
         plt.imshow(heatmap, cmap="hot",interpolation="nearest", aspect=14/c)
@@ -978,20 +986,22 @@ class ChronoClient:
         for note in d["todo"]:
             p.todo.append(ChronoNote(note["text"], datetime.fromisoformat(note["datetime"])))
         for day in d["days"].values():
-            events=[ChronoEvent(start=event["start"], end=event["end"], what=event["what"], tags=event["tags"]) for event in day["events"]]
-            sevents=[ChronoTime(start=event["start"], what=event["what"], tags=event["tags"]) for event in day["sevents"]]
-            sport={sport:day["sport"][sport] for sport in day["sport"].keys()}
-            p.add_day(ChronoDay(events=events, input_date=day["date"], day_start=day["day_start"], day_end=day["day_end"]))
-            for ctime in sevents:
-                p.days[day["date"]].add_silent(ctime)
-            for run in sport["runs"]:
-                p.days[day["date"]].add_run(ChronoRunningEvent(run["time"],run["distance"],time(int(run["start_time"][0:2]),int(run["start_time"][3:5]))))
-            for situp in sport["situps"]:
-                p.days[day["date"]].add_situp(ChronoSitUpsEvent(situp["time"],situp["mult"],time(int(situp["start_time"][0:2]),int(situp["start_time"][3:5]))))
-            for plank in sport["planks"]:
-                p.days[day["date"]].add_plank(ChronoPlankEvent(plank["time"],time(int(plank["start_time"][0:2]),int(plank["start_time"][3:5]))))
-            for pushup in sport["pushups"]:
-                p.days[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time(int(pushup["start_time"][0:2]),int(pushup["start_time"][3:5]))))
+            day_date=date(int(day["date"][:4]),int(day["date"][5:7]),int(day["date"][8:10]))
+            if p.restriction[0]<= day_date and day_date <= p.restriction[1]:
+                events=[ChronoEvent(start=event["start"], end=event["end"], what=event["what"], tags=event["tags"]) for event in day["events"]]
+                sevents=[ChronoTime(start=event["start"], what=event["what"], tags=event["tags"]) for event in day["sevents"]]
+                sport={sport:day["sport"][sport] for sport in day["sport"].keys()}
+                p.add_day(ChronoDay(events=events, input_date=day["date"], day_start=day["day_start"], day_end=day["day_end"]))
+                for ctime in sevents:
+                    p.get_days()[day["date"]].add_silent(ctime)
+                for run in sport["runs"]:
+                    p.get_days()[day["date"]].add_run(ChronoRunningEvent(run["time"],run["distance"],time(int(run["start_time"][0:2]),int(run["start_time"][3:5]))))
+                for situp in sport["situps"]:
+                    p.get_days()[day["date"]].add_situp(ChronoSitUpsEvent(situp["time"],situp["mult"],time(int(situp["start_time"][0:2]),int(situp["start_time"][3:5]))))
+                for plank in sport["planks"]:
+                    p.get_days()[day["date"]].add_plank(ChronoPlankEvent(plank["time"],time(int(plank["start_time"][0:2]),int(plank["start_time"][3:5]))))
+                for pushup in sport["pushups"]:
+                    p.get_days()[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time(int(pushup["start_time"][0:2]),int(pushup["start_time"][3:5]))))
         self.project=p
         self.add_commands()
 
