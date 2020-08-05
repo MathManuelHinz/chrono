@@ -1039,11 +1039,8 @@ def restrict(days:List[ChronoDay], coupling:List[float], width:int)->List[Chrono
     return rtn
 
 def check_in_timeframe(tf:Tuple[time, time], event:ChronoEvent)->bool:
-    return (tf[0]<= event.start and event.start < tf[1]) or (tf[0]< event.end and event.end <= tf[1])# \
-            #or (event.start <= tf[0] and tf[0]<=event.end) or (event.start <= tf[1] and tf[1]<=event.end) Unnötig, weil tfs schon so fein wie nötig ist.
+    return (tf[0]<= event.start and event.start < tf[1]) or (tf[0]< event.end and event.end <= tf[1])\
+            or (event.start <= tf[0] and tf[0]<event.end) or (event.start < tf[1] and tf[1]<=event.end)
 
 def get_tf_length(tf:Tuple[time, time])->int:
     return (tf[1].hour-tf[0].hour)*60*60+(tf[1].minute-tf[0].minute)*60+(tf[1].second-tf[0].second)
-
-def fill_heatmap(heatmap:List[List[int]],tfs:List[Tuple[time,time]])->List[List[int]]:
-    pass
