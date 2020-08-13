@@ -1,4 +1,5 @@
-from typing import Dict, List, Tuple, IO
+from subprocess import call
+from typing import Dict, List, Tuple, IO,Callable
 from functools import reduce
 from datetime import datetime, date, time
 
@@ -49,5 +50,18 @@ def split_command(command:str)->List[str]:
         rtn= command.split(" ")
         return list(filter(lambda l: not l=="", rtn))
 
-def get_seconds(t:time):
+def get_seconds(t:time)->int:
     return t.second + t.minute*60 + t.hour*60*60
+
+def get_lambda(alias:str,cmds=Dict[str, Callable]):
+    splitcmd=split_command(alias)
+    return (lambda *xs: cmds[splitcmd[0]](xs[0],xs[1],*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in splitcmd[1:]]))
+
+def time_from_str(str_time:str)->time:
+    return time(int(str_time[0:2]),int(str_time[3:5]))
+
+def date_from_str(str_date:str)->date:
+    return date(int(str_date[0:4]),int(str_date[5:7]),int(str_date[8:10])) 
+
+def get_tf_length(tf:Tuple[time, time])->int:
+    return (tf[1].hour-tf[0].hour)*60*60+(tf[1].minute-tf[0].minute)*60+(tf[1].second-tf[0].second)
