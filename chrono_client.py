@@ -1040,11 +1040,18 @@ class ChronoClient:
 
 
 def get_time(day:ChronoDay, tag:str)->float:
+    """
+    Returns the amount of seconds a certain activity associated with the tag has been done on a given day. 
+    """
     return sum([((datetime.combine(date.today(), event.end)\
                      - datetime.combine(date.today(), event.start))\
                 .seconds/3600)*(tag in event.tags) for event in day.events])
 
 def get_intersect_sum(day:ChronoDay, tags:List[str])->float:
+    """
+    Returns the amount of seconds a certain activity associated with the tags has been done on a given day. 
+    Events which match with multiple tags are only counted once.
+    """
     overhead=0
     for event in day.events:
         if not (I:=get_intersect(tags, event.tags))==[]:
@@ -1054,6 +1061,9 @@ def get_intersect_sum(day:ChronoDay, tags:List[str])->float:
     return overhead
 
 def restrict(days:List[ChronoDay], coupling:List[float], width:int)->List[ChronoDay]:
+    """
+    Returns a subset of the list coupling, which are <= width day away from today.
+    """
     tmp = date.today()
     rtn=[]
     for i, day in enumerate(days):
@@ -1062,6 +1072,9 @@ def restrict(days:List[ChronoDay], coupling:List[float], width:int)->List[Chrono
     return rtn
 
 def check_in_timeframe(tf:Tuple[time, time], event:ChronoEvent)->bool:
+    """
+    Checks if a ChronoEvent overlaps with a given timeframe.
+    """
     return (tf[0]<= event.start and event.start < tf[1]) or (tf[0]< event.end and event.end <= tf[1])\
             or (event.start <= tf[0] and tf[0]<event.end) or (event.start < tf[1] and tf[1]<=event.end)
 
