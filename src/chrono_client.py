@@ -10,14 +10,14 @@ from typing import (Callable, Dict, List, Tuple, Union, Set)
 
 import matplotlib.pyplot as plt
 
-from helper import (get_color, get_intersect, list_to_string, split_command,
+from src.helper import (get_color, get_intersect, list_to_string, split_command,
                     write_table,get_seconds, get_lambda, time_from_str, date_from_str, get_tf_length, 
                     WEEKDAYS, MSSH_color_scheme)
 
-from sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
+from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
                    ChronoPushUpEvent, ChronoSportEvent)
 
-from atoms import (ChronoEvent, ChronoTime, ChronoNote)
+from src.atoms import (ChronoEvent, ChronoTime, ChronoNote)
 
 class ChronoDay:
     """This class is used to organize ChronoEvent- and  ChronoTimes-objects. 

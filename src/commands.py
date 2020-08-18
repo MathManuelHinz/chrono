@@ -1,4 +1,4 @@
-from chrono_client import MSSH
+from src.chrono_client import MSSH
 
 MSSH_COMMS={
     "setr":MSSH.c_setr,

@@ -1,6 +1,6 @@
 from typing import (Dict, List, Union)
 from datetime import (time, datetime)
-from helper import time_from_str
+from src.helper import time_from_str
 
 class ChronoTime:
     """ This class should be used for very short events, such as deadlines."""

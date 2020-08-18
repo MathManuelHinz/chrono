@@ -1,5 +1,5 @@
-from chrono_client import  (ChronoClient, ChronoSchedule)
-from commands import MSSH_COMMS
+from src.chrono_client import  (ChronoClient, ChronoSchedule)
+from src.commands import MSSH_COMMS
 
 
 if __name__ == "__main__":
