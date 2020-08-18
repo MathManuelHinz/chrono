@@ -206,8 +206,6 @@ class ChronoProject:
     def add_day(self,day:ChronoDay)->None:
         if not day.date.isoformat() in self.days.keys():
             if not self.schedule == None:
-                print(self.schedulemod)
-                print(int(day.date.isocalendar()[1])%self.schedulemod)
                 day.events += self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]
                 day.day_start, day.day_end = day.get_bounds()
             self.days[day.date.isoformat()]=day
