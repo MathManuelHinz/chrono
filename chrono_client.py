@@ -3,172 +3,21 @@ import logging
 import os
 import shutil
 import subprocess
-from datetime import date, datetime, time, timedelta
+from datetime import (date, datetime, time, timedelta)
 from functools import reduce
 from inspect import signature
-from typing import Callable, Dict, List, Tuple, Union,Set
+from typing import (Callable, Dict, List, Tuple, Union, Set)
 
 import matplotlib.pyplot as plt
 
 from helper import (get_color, get_intersect, list_to_string, split_command,
-                    write_table,get_seconds, get_lambda,time_from_str,date_from_str,get_tf_length)
+                    write_table,get_seconds, get_lambda, time_from_str, date_from_str, get_tf_length, 
+                    WEEKDAYS, MSSH_color_scheme)
 
-#todo
-#ToDo
-#getNext
-#speed up plot_week
-#restructure times
-#assert
-#times
-#-setup
-#project stats
-#add times to schedule?
-#check overlap
-#Fix ChronoDay
-#Fix Schedule
-#show schedule
-#adobe api, send help
-#times / Waking up
-#docstring ausführlicher
-#tests
-#tageslücken
+from sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
+                   ChronoPushUpEvent, ChronoSportEvent)
 
-WEEKDAYS=["Monday", "Tuesday", "Wendsday", "Thursday", "Friday","Saturday", "Sunday"]
-
-class ChronoTime:
-    """ This class should be used for very short events, such as deadlines."""
-
-    start:time
-    what:str
-    tags:List[str]
-
-    def __init__(self, start:str, what:str, tags:List[str]=[]):
-        """Constructor: ChronoTime. start input will be converted to a time object, 
-        the other inputs will be used as attributes. 
-        Attributes:
-            start: Should be of the form HH:MM
-            what: Should be a reasonably short string
-            tags: Should be a list of tags, seperated by "," given as a single string"""
-        self.start=time_from_str(start)
-        self.what=what
-        self.tags=tags
-
-    def to_dict(self)->Dict[str, Union[str, List[str]]]:
-        """Used to save the object as a json."""
-        d=dict()
-        d["start"]=self.start.isoformat() #HH:MM:SS
-        d["what"]=self.what
-        d["tags"]=self.tags
-        return d
-
-    def __repr__(self)->str:
-        """Returns a string representation of this object. Used by the command times"""
-        return f"Time: {self.start}, what: {self.what}"
-
-
-class ChronoEvent:
-    """This class is used for all events which are to long for ChronoTime. 
-    The majority of events should be ChronoEvents."""
-
-    start:time
-    end:time
-    what:str
-    tags:List[str]
-
-    def __init__(self, start:str, end:str, what:str, tags:List[str]=[]):
-        """Constructor: ChronoEvent. start and end input will be converted to a time object, 
-        the other inputs will be directly used as attributes. 
-        The starting time has to be strictly before the ending time.
-        Attributes:
-            start: Should be of the format HH:MM
-            end: Should be of the format HH:MM
-            what: Should be a reasonably short string
-            tags: Should be a list of tags, seperated by "," given in the form of single string"""
-        
-        self.start=time_from_str(start)
-        self.end=time_from_str(end)
-        self.what=what
-        self.tags=tags
-        assert self.start<self.end
-
-    def __repr__(self)->str:
-        """Returns a string representation of this object. Used by the command today"""
-        return f"From {self.start.isoformat()} until {self.end.isoformat()} : {self.what}"
-
-    def to_dict(self)->Dict[str, Union[str, List[str]]]:
-        """Used to save the object as a json."""
-        d=dict()
-        d["start"]=self.start.isoformat()
-        d["end"]=self.end.isoformat()
-        d["what"]=self.what
-        d["tags"]=self.tags
-        return d
-
-class ChronoSportEvent:
-
-
-    def to_dict(self):
-        pass
-
-class ChronoRunningEvent(ChronoSportEvent):
-
-
-    def __init__(self, run_time:float, distance:float, start_time:time):
-        self.time=run_time
-        self.distance=distance
-        self.start_time=start_time
-
-    def __repr__(self)->str:
-        return f"time:{self.time}, distance:{self.distance},start_time:{self.start_time}"
-
-    def to_dict(self)->Dict[str, float]:
-        iso=self.start_time.isoformat()
-        return {"time":self.time,"distance":self.distance,"start_time":iso[0:2]+":"+iso[3:5]}
-
-class ChronoPushUpEvent(ChronoSportEvent):
-   
-   
-    def __init__(self, p_times:List[float], p_mults:List[int], start_time:time):
-        self.times=p_times #how long
-        self.mults=p_mults #how many
-        self.start_time=start_time #when
-
-    def __repr__(self)->str:
-        return f"times:{self.times}, mults:{self.mults},start_time:{self.start_time}"
-
-    def to_dict(self)->Dict[str, float]:
-        iso=self.start_time.isoformat()
-        return {"times":self.times,"mults":self.mults,"start_time":iso[0:2]+":"+iso[3:5]}
-
-class ChronoSitUpsEvent(ChronoSportEvent):
-
-
-    def __init__(self, p_times:float, mult:int, start_time:time):
-        self.time=p_times #how long
-        self.mult=mult #how many
-        self.start_time=start_time #when
-
-    def __repr__(self)->str:
-        return f"time:{self.time}, mult:{self.mult},start_time:{self.start_time}"
-
-    def to_dict(self)->Dict[str, float]:
-        iso=self.start_time.isoformat()
-        return {"time":self.time,"mult":self.mult,"start_time":iso[0:2]+":"+iso[3:5]}
-
-class ChronoPlankEvent(ChronoSportEvent):
-
-
-    def __init__(self, times:float, start_time:time):
-        self.time=times #how long
-        self.start_time=start_time #when
-
-    def __repr__(self)->str:
-        return f"time:{self.time},start_time:{self.start_time}"
-
-    def to_dict(self)->Dict[str, float]:
-        iso=self.start_time.isoformat()
-        return {"time":self.time,"start_time":iso[0:2]+":"+iso[3:5]}
-
+from atoms import (ChronoEvent, ChronoTime, ChronoNote)
 
 class ChronoDay:
     """This class is used to organize ChronoEvent- and  ChronoTimes-objects. 
@@ -313,40 +162,6 @@ class ChronoSchedule:
         for i,week in enumerate(data):
             for j  in range(7):
                 self.days[i][j]=[ChronoEvent(e["start"], e["end"], e["what"], e["tags"]) for e in week[j]]
-    
-
-class ChronoNote:
-    """One bullet point on the todo list."""
-    text:str
-    dt:datetime
-
-    def __init__(self, text:str, dt:datetime=datetime.now()):
-        """Saves a text and takes dt to be the time this object gets created."""
-        self.text=text
-        self.dt=dt
-    
-    def __repr__(self)->str:
-        return self.text
-
-    def to_dict(self)->Dict[str, str]:
-        """Used to save the ChronoNote."""
-        d=dict()
-        d["text"]=self.text
-        d["datetime"]=self.dt.date().isoformat()+"_"+self.dt.time().isoformat()
-        return d
-
-
-MSSH_color_scheme:Dict[str, str]={
-    "default":"black",
-    "leben":"black",
-    "relax":"black",
-    "mathe":"red",
-    "uni":"red",
-    "creative":"green",
-    "programming":"blue",
-    "tine":"magenta",
-    "korean":"magenta"
-}
 
 
 class ChronoProject:
@@ -871,44 +686,6 @@ class MSSH:
         return reference
      
 
-MSSH_COMMS={
-    "setr":MSSH.c_setr,
-    "mkDay":MSSH.c_create_day,
-    "mkEvent":MSSH.c_create_event,
-    "mkTime":MSSH.c_create_time,
-    "days":MSSH.c_days,
-    "mk":MSSH.c_mk,
-    "show":MSSH.c_show,
-    "times":MSSH.c_times,
-    "genDays":MSSH.c_gen_days,
-    "clear":MSSH.c_clear,
-    "clearf":MSSH.c_clear_future,
-    "getCurrent":MSSH.c_get_current,
-    "today":MSSH.c_today,
-    "day":MSSH.c_day,
-    "changeEtime":MSSH.c_change_event_time,
-    "changeEwhat":MSSH.c_change_event_what,
-    "changeEtags":MSSH.c_change_event_tags,
-    "changeEvent":MSSH.c_change_event,
-    "delDay":MSSH.c_delete_day,
-    "delEvent":MSSH.c_delete_event, 
-    "end":MSSH.c_end,
-    "plot":MSSH.c_plot_stats,
-    "plotw":MSSH.c_plot_week,
-    "note":MSSH.c_note,
-    "notes":MSSH.c_todo,
-    "deln":MSSH.c_del_note,
-    "stats":MSSH.c_stats,
-    "addRun":MSSH.c_add_run,
-    "addSitup":MSSH.c_add_situp,
-    "addPushup":MSSH.c_add_pushup,
-    "addPlank":MSSH.c_add_plank,
-    "merge":MSSH.c_merge,
-    "heatmap":MSSH.c_heatmap,
-    "split": MSSH.c_split_project,
-    "debug": lambda a,b,*x: print(b,x)
-}
-
 
 class ChronoClient:
 
@@ -946,9 +723,7 @@ class ChronoClient:
             print("calls : "+self.project.settings["alias"][cmd])
         elif cmd in self.command_set.keys():
             sig=signature(self.command_set[cmd])
-            if (cmd.replace("mk", "") in self.project.settings["mk_shortcuts"].keys()):
-                print(self.project.settings["mk_shortcuts"][cmd.replace("mk", "")][2])
-            else: print(self.command_set[cmd].__doc__)
+            print(self.command_set[cmd].__doc__)
             if not len(sig.parameters.keys())==2:
                 sig=str(sig).replace("(project: chrono_client.ChronoProject, reference: str", "")\
                     .replace(") -> str", "").replace("(p, r", "").replace(")", "")

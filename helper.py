@@ -3,6 +3,20 @@ from typing import Dict, List, Tuple, IO,Callable
 from functools import reduce
 from datetime import datetime, date, time
 
+WEEKDAYS=["Monday", "Tuesday", "Wendsday", "Thursday", "Friday","Saturday", "Sunday"]
+
+MSSH_color_scheme:Dict[str, str]={
+    "default":"black",
+    "leben":"black",
+    "relax":"black",
+    "mathe":"red",
+    "uni":"red",
+    "creative":"green",
+    "programming":"blue",
+    "tine":"magenta",
+    "korean":"magenta"
+}
+
 def is_in(t1:datetime, b1:datetime, b2:datetime)->bool:
     """Checks if t1 is in between b1 and b2. Asserts that b1 < b2."""
     assert b1 < b2

@@ -1,4 +1,7 @@
-from chrono_client import ChronoDay, ChronoEvent,ChronoProject, ChronoClient, MSSH_COMMS, ChronoSchedule
+from chrono_client import  (ChronoClient, ChronoSchedule)
+from commands import MSSH_COMMS
+
+
 if __name__ == "__main__":
     s=ChronoSchedule("schedule.json")
     c=ChronoClient("zeitplan", MSSH_COMMS)
