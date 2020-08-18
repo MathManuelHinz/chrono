@@ -694,7 +694,7 @@ class ChronoClient:
 
     def c_commands(self, project:ChronoProject, reference:str)->str:
         """Prints all commands."""
-        print(self.command_set.keys())
+        print(list(self.command_set.keys()))
         return reference
 
     def c_refresh(self, project:ChronoProject, reference:str)->str:
