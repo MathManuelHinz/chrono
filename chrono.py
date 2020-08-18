@@ -3,5 +3,5 @@ if __name__ == "__main__":
     s=ChronoSchedule("schedule.json")
     c=ChronoClient("zeitplan", MSSH_COMMS)
     c.build_ChronoProject()
-    c.project.schedule=s
+    c.project.set_schedule(s)
     c.run()

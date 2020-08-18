@@ -105,10 +105,14 @@ class ChronoEvent:
         return d
 
 class ChronoSportEvent:
+
+
     def to_dict(self):
         pass
 
 class ChronoRunningEvent(ChronoSportEvent):
+
+
     def __init__(self, run_time:float, distance:float, start_time:time):
         self.time=run_time
         self.distance=distance
@@ -122,6 +126,8 @@ class ChronoRunningEvent(ChronoSportEvent):
         return {"time":self.time,"distance":self.distance,"start_time":iso[0:2]+":"+iso[3:5]}
 
 class ChronoPushUpEvent(ChronoSportEvent):
+   
+   
     def __init__(self, p_times:List[float], p_mults:List[int], start_time:time):
         self.times=p_times #how long
         self.mults=p_mults #how many
@@ -135,6 +141,8 @@ class ChronoPushUpEvent(ChronoSportEvent):
         return {"times":self.times,"mults":self.mults,"start_time":iso[0:2]+":"+iso[3:5]}
 
 class ChronoSitUpsEvent(ChronoSportEvent):
+
+
     def __init__(self, p_times:float, mult:int, start_time:time):
         self.time=p_times #how long
         self.mult=mult #how many
@@ -148,6 +156,8 @@ class ChronoSitUpsEvent(ChronoSportEvent):
         return {"time":self.time,"mult":self.mult,"start_time":iso[0:2]+":"+iso[3:5]}
 
 class ChronoPlankEvent(ChronoSportEvent):
+
+
     def __init__(self, times:float, start_time:time):
         self.time=times #how long
         self.start_time=start_time #when
@@ -294,14 +304,15 @@ class ChronoDay:
 
 class ChronoSchedule:
     
-    days:List[List[ChronoEvent]]
+    days:List[List[List[ChronoEvent]]]
 
     def __init__(self, path):
-        self.days=[[] for _ in range(7)]
         with open(path, "r+", encoding="utf-8") as f:
             data=json.load(f)
-        for i  in range(7):
-            self.days[i]=[ChronoEvent(e["start"], e["end"], e["what"], e["tags"]) for e in data[i]]
+        self.days=[[[] for _ in range(7)]for i in range(len(data))]
+        for i,week in enumerate(data):
+            for j  in range(7):
+                self.days[i][j]=[ChronoEvent(e["start"], e["end"], e["what"], e["tags"]) for e in week[j]]
     
 
 class ChronoNote:
@@ -345,16 +356,23 @@ class ChronoProject:
     todo:List[ChronoNote]
     days:Dict[str, ChronoDay]
     schedule:ChronoSchedule
+    schedulemod:int
+    scheme:Dict[str, str]
 
-    def __init__(self, name:str, path:str, schedule:ChronoSchedule=None):
+    def __init__(self, name:str, path:str):
         self.name=name
         self.path=path
         self.days=dict()
-        self.schedule=schedule
+        self.schedule=None
         self.todo=[]
         self.header=["\\documentclass{article}"]
         self.scheme=MSSH_color_scheme
         self.load_settings()
+
+    def set_schedule(self,schedule:ChronoSchedule)->None:
+        self.schedule=schedule
+        if schedule==None: self.schedulemod=0
+        else: self.schedulemod=len(self.schedule.days)        
 
     def load_settings(self)->None:
         with open("settings.json", "r+", encoding="utf-8") as f:
@@ -373,7 +391,9 @@ class ChronoProject:
     def add_day(self,day:ChronoDay)->None:
         if not day.date.isoformat() in self.days.keys():
             if not self.schedule == None:
-                day.events += self.schedule.days[day.date.weekday()]
+                print(self.schedulemod)
+                print(int(day.date.isocalendar()[1])%self.schedulemod)
+                day.events += self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]
                 day.day_start, day.day_end = day.get_bounds()
             self.days[day.date.isoformat()]=day
         else:
