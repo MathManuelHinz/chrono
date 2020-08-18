@@ -10,12 +10,12 @@
         "tine":"magenta",
         "korean":"magenta"
     },
+    "pdfpath":"path",
     "oura":false,
-    "mk_shortcuts":{
-        "Ana": ["Ana Aufgaben", "ana2,mathe,uni,aufgaben","Creates ana2 event with var:start var:stop and the appropriate tags."],
-        "La":["LA Aufgaben", "la2,mathe,uni,aufgaben","Creates la2 event with var:start var:stop and the appropriate tags."],
-        "Alma":["Alma Aufgaben", "alma2,mathe,uni,aufgaben","Creates alma2 event with var:start var:stop and the appropriate tags."],
-        "Markov":["Markov Aufgaben", "markov,mathe,uni,seminar","Creates markov event with var:start var:stop and the appropriate tags."],
-        "Korean":["Korean", "korean","Creates korean event with var:start var:stop and the appropriate tags."]
-    } 
+    "code":"111",
+    "alias":{
+        "test":"debug 1 2 3 $1 $2",
+        "test2": "debug 3 2 1 $1",
+        "helpme": "help mkEvent"
+    }
 }
