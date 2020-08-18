@@ -495,6 +495,8 @@ class MSSH:
     @staticmethod
     def c_create_event(project:ChronoProject, reference:str, what:str, tags:str="relax", start:str="08:00", end:str="10:00", force:str="1")->str:
         """Creates a ChronoEvent given:"""
+        if start == end:
+            raise Exception("start can't be the same as end")
         if reference in project.days.keys():
             try:
                 project.add_event(ChronoEvent(start=start, end=end, what=what, tags=tags.split(",")), reference, force=int(force))
