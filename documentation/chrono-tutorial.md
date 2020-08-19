@@ -233,20 +233,29 @@ note "My note contains spaces"
 note My note contains spaces
 ```
 
+### notes
+
 ### mkTime
 
 A ChronoTime should describe an instantaneous event (like a deadline). 
 
-mkTime takes **3** arguments and saves them to a ChronoTime.
+mkTime takes **3** or **4** arguments and saves them to a ChronoTime.
 
 1. what : Describe what this ChronoTime is about.
 2. tags : Tags describing this ChronoTime.
 3. start : The time.
+4. date: The date on which the ChronoTime should be. If no date is given, it will be inferred to be the current reference.
 
-Example:
+Keep in mind that the day on which the ChronoTime happens needs to be generated before you can create a ChronoTime for the day.
+
+Examples:
 
 ```
 mkTime "Super important deadline" job,deadline,programming 17:59
+```
+
+```
+mkTime "Super important deadline" job,deadline,programming 17:59 2020-12-13
 ```
 
 ### times

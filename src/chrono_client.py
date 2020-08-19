@@ -322,11 +322,12 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_create_time(project:ChronoProject, reference:str, what:str, tags:str="relax", start:str="08:00")->str:
+    def c_create_time(project:ChronoProject, reference:str, what:str, tags:str,start:str,idate:str="ref")->str:
         """Creates a ChronoTime given:"""
-        if reference in project.days.keys():
+        if idate=="ref": idate=reference
+        if idate in project.days.keys():
             try:
-                project.days[reference].add_silent(ChronoTime(start=start,what=what, tags=tags.split(",")))
+                project.days[idate].add_silent(ChronoTime(start=start,what=what, tags=tags.split(",")))
             except Exception as e:
                 print(e)
                 logging.info(e)
@@ -543,8 +544,8 @@ class MSSH:
         if (tmp := date.today()).isoformat() in project.days.keys():
             plt.scatter([d:=(tmp-days[0].date).days], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-        plt.xlabel("Tage")
-        plt.ylabel("Stunden")
+        plt.xlabel("Days")
+        plt.ylabel("Hours")
         plt.show()
         return reference
 
@@ -581,8 +582,8 @@ class MSSH:
             plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xticks(week_splice(xs), week_splice([WEEKDAYS[day.date.weekday()][0:3]+"." for day in days]))
-        plt.xlabel("Tage")
-        plt.ylabel("Stunden")
+        plt.xlabel("Days")
+        plt.ylabel("Hours")
         plt.show()
         return reference
 
@@ -723,7 +724,7 @@ class ChronoClient:
             sig=signature(self.command_set[cmd])
             print(self.command_set[cmd].__doc__)
             if not len(sig.parameters.keys())==2:
-                sig=str(sig).replace("(project: chrono_client.ChronoProject, reference: str", "")\
+                sig=str(sig).replace("(project: src.chrono_client.ChronoProject, reference: str", "")\
                     .replace(") -> str", "").replace("(p, r", "").replace(")", "")
                 print(sig[2:])
             else:
