@@ -102,7 +102,7 @@ class ChronoDay:
         pass
 
     def get_slots(self)->List[ChronoEvent]:
-        """returns the events sorted by starting time."""
+        """Returns the events sorted by starting time."""
         return sorted(self.events, key=lambda x:x.start)
 
     def get_bounds(self)->Tuple[str, str]:
@@ -135,15 +135,19 @@ class ChronoDay:
         return d
 
     def add_run(self, run:ChronoRunningEvent):
+        """Adds a run event to the "runs" list."""
         self.sport["runs"].append(run)
 
     def add_situp(self, sit:ChronoSitUpsEvent):
+        """Adds a situp event to the "situp" list."""
         self.sport["situps"].append(sit)
 
     def add_pushup(self, pu:ChronoPushUpEvent):
+        """Adds a pushup event to the "pushup" list."""
         self.sport["pushups"].append(pu)
 
     def add_plank(self, plank:ChronoPlankEvent):
+        """Adds a plank event to the "plank" list."""
         self.sport["planks"].append(plank)
 
 class ChronoSchedule:
@@ -151,6 +155,7 @@ class ChronoSchedule:
     days:List[List[List[ChronoEvent]]]
 
     def __init__(self, path):
+        """Constructor of ChronoSchedule."""
         with open(path, "r+", encoding="utf-8") as f:
             data=json.load(f)
         self.days=[[[] for _ in range(7)]for i in range(len(data))]
@@ -171,6 +176,7 @@ class ChronoProject:
     scheme:Dict[str, str]
 
     def __init__(self, name:str, path:str):
+        """Constructor of ChronoProject."""
         self.name=name
         self.path=path
         self.days=dict()
@@ -181,25 +187,30 @@ class ChronoProject:
         self.load_settings()
 
     def set_schedule(self,schedule:ChronoSchedule)->None:
+        """Sets the schedule for this project."""
         self.schedule=schedule
         if schedule==None: self.schedulemod=0
         else: self.schedulemod=len(self.schedule.days)        
 
     def load_settings(self)->None:
+        """ Loads settings from "settings.json"."""
         with open("settings.json", "r+", encoding="utf-8") as f:
             self.settings=json.load(f)
         self.scheme=self.settings["color_scheme"]
 
-    def set_alias(self,cmds:Dict[str,Callable])->None:
+    def set_alias(self, cmds:Dict[str,Callable])->None:
+        """Creates the alias Dict. Needs load_settings to be called first"""
         self.alias={key:get_lambda(self.settings["alias"][key], cmds) for key in self.settings["alias"].keys()}
 
     def add_note(self, note:ChronoNote)->None:
+        """ Adds a note to the todo list."""
         if not note.text in map(lambda x: x.text, self.todo):
             self.todo.append(note)
         else:
             print("duplicate ChronoNote")
 
     def add_day(self,day:ChronoDay)->None:
+        """Adds a day to the days dict."""
         if not day.date.isoformat() in self.days.keys():
             if not self.schedule == None:
                 day.events += self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]
@@ -209,15 +220,19 @@ class ChronoProject:
             logging.warning(f"can`t add day {day.date.isoformat()}")
 
     def add_event(self, event:ChronoEvent, date:str, force:bool=False)->None:
+        """ Adds a ChronoEvent to a given day."""
         self.days[date].add_event(event, force)
 
     def __repr__(self)->str:
+        """Represent this object as a string."""
         return reduce(lambda a,b: a+"\n"+b, [day.__repr__() for day in self.days.values()])
 
     def get_meta(self)->List[str]:
+        """Generates metadata for the LaTeX file."""
         return ["\\title{" + f"{self.name}"+"}"]
 
-    def export_pdf(self, days=[""])->int:
+    def export_pdf(self, days=[""])->None:
+        """ Exports the object to a LaTeX -> PDF file."""
         if days==[""]:
             days=[day for day in self.days.keys()]
         days=[self.days[key] for key in filter(lambda x: x in self.days.keys(), days)]
@@ -226,10 +241,7 @@ class ChronoProject:
             f.write(list_to_string(header)+"\n"+list_to_string(self.get_meta())+"\n")
             f.write("\\begin{document}\n")
             f.write("\\maketitle\n")
-            pagen=1
             for day in sorted(days, key=lambda x: x.date):
-                if day.date < date.today():
-                    pagen += 1
                 if day.events == []:
                     pass
                 else:
@@ -255,9 +267,9 @@ class ChronoProject:
         if os.path.isfile(f"{self.name}.out"):os.remove(f"{self.name}.out")
         if os.path.isfile(f"{self.name}.toc"):os.remove(f"{self.name}.toc")
         if os.path.isfile(f"{self.name}.tex"):os.remove(f"{self.name}.tex")
-        return pagen
         
     def save(self, path=None)->None:
+        """Saves the current state of the project to a json file. """
         if path == None: path=self.path
         export=dict()
         export["todo"]=[note.to_dict() for note in self.todo]
@@ -269,6 +281,7 @@ class ChronoProject:
             json.dump(export, f)
 
     def get_poi(self)->Set[time]:
+        """ Collects all points of interest (starts / ends of all events)."""
         poi=set()
         for day in self.days.values():
             for event in day.events:
@@ -456,10 +469,10 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_times(project:ChronoProject, reference:str, days:int="1")->str:
+    def c_times(project:ChronoProject, reference:str, days:str="1")->str:
         """Prints the ChronoTimes of the next var:days days."""
         d=date.today()
-        allowed_delta=timedelta(days=1)
+        allowed_delta=timedelta(days=int(days))
         for sevent in project.sevents:
             if d-sevent.tdate <= allowed_delta:
                 print(sevent)
@@ -737,6 +750,7 @@ class ChronoClient:
         return reference
 
     def add_commands(self)->None:
+        """ Adds commands to the command set of this object."""
         self.command_set["quit"]=self.c_quit
         self.command_set["commands"]=self.c_commands
         self.command_set["restore"]=self.c_restore
@@ -751,6 +765,7 @@ class ChronoClient:
         logging.basicConfig(filename="log.txt", level=logging.INFO)
 
     def run(self)->None:
+        """ Main loop of Chrono."""
         logging.info(f"run at : {datetime.today()}")
         if self.project== None:
             raise Exception("Missing project")
@@ -779,7 +794,7 @@ class ChronoClient:
         logging.shutdown()
 
     def build_ChronoProject(self, path:str=None)->ChronoProject:
-        sevents=[]
+        """ Builds a ChronoProject from a given path. """
         if path == None: path=self.path
         with open(path+".json", "r+", encoding="utf-8") as f:
             d=json.load(f)
