@@ -365,7 +365,7 @@ Example (my current setup):
         "creative":"green",
         "programming":"blue",
         "korean":"magenta"
-    }
+}
 ```
 
 ### alias
@@ -383,7 +383,7 @@ A real life example: While coding and documenting chrono, I wanted to create chr
 "alias":{
         "mkc": "mkEvent Chrono chrono,programming $1 $2",
         "mkcb": "mkEvent \"Chrono: Blog\" chrono,programming,blog $1 $2"
-        }
+}
 ```
 
 Notice how you can use escaped double quotes to account for spaces in arguments.
