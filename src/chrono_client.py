@@ -73,10 +73,6 @@ class ChronoDay:
             rtn= event1.start < event2.end
         return rtn
 
-    def add_silent(self, silent_event:ChronoTime)->None:
-        """Adds a ChronoTime object to the silent_events list."""
-        self.silent_events.append(silent_event)
-
     def add_event(self, event:ChronoEvent, force:bool=False)->None:
         """
         This function tries a event to the events list. 
@@ -135,7 +131,6 @@ class ChronoDay:
         d["day_end"]=self.day_end.isoformat()
         d["date"]=self.date.__str__()
         d["events"]=[event.to_dict() for event in self.events]
-        d["sevents"]=[event.to_dict() for event in self.silent_events]
         d["sport"]={key:[entry.to_dict() for entry in self.sport[key]] for key in self.sport.keys()}
         return d
 
@@ -170,6 +165,7 @@ class ChronoProject:
     name:str
     todo:List[ChronoNote]
     days:Dict[str, ChronoDay]
+    sevents:List[ChronoTime]
     schedule:ChronoSchedule
     schedulemod:int
     scheme:Dict[str, str]
@@ -268,6 +264,7 @@ class ChronoProject:
         export["name"]=self.name
         export["path"]=path
         export["days"]={key:self.days[key].to_dict() for key in self.days.keys()}
+        export["sevents"]=[sev.to_dict() for sev in self.sevents]
         with open(path+".json", "w+", encoding="utf-8") as f:
             json.dump(export, f)
 
@@ -278,6 +275,10 @@ class ChronoProject:
                 poi.add(event.start)
                 poi.add(event.end)
         return poi
+
+    def add_silent(self, stime:ChronoTime)->None:
+        """Adds a ChronoTime to sevents."""
+        self.sevents.append(stime)
 
 class MSSH:
 
@@ -325,15 +326,11 @@ class MSSH:
     def c_create_time(project:ChronoProject, reference:str, what:str, tags:str,start:str,idate:str="ref")->str:
         """Creates a ChronoTime given:"""
         if idate=="ref": idate=reference
-        if idate in project.days.keys():
-            try:
-                project.days[idate].add_silent(ChronoTime(start=start,what=what, tags=tags.split(",")))
-            except Exception as e:
-                print(e)
-                logging.info(e)
-        else:
-            print("invalid key")
-            logging.info(f"invalid key (addEvent) : {reference}")
+        try:
+            project.add_silent(ChronoTime(idate,start=start,what=what, tags=tags.split(",")))
+        except Exception as e:
+            print(e)
+            logging.info(e)
         return reference
 
     @staticmethod
@@ -462,11 +459,10 @@ class MSSH:
     def c_times(project:ChronoProject, reference:str, days:int="1")->str:
         """Prints the ChronoTimes of the next var:days days."""
         d=date.today()
-        for _ in range(int(days)):
-            if d.isoformat() in project.days.keys():
-                for time in project.days[d.isoformat()].silent_events:
-                    print(f"{d.isoformat()} : {time}")
-            d += timedelta(days=1)
+        allowed_delta=timedelta(days=1)
+        for sevent in project.sevents:
+            if d-sevent.tdate <= allowed_delta:
+                print(sevent)
         return reference
 
     @staticmethod
@@ -783,6 +779,7 @@ class ChronoClient:
         logging.shutdown()
 
     def build_ChronoProject(self, path:str=None)->ChronoProject:
+        sevents=[]
         if path == None: path=self.path
         with open(path+".json", "r+", encoding="utf-8") as f:
             d=json.load(f)
@@ -790,13 +787,9 @@ class ChronoClient:
         for note in d["todo"]:
             p.todo.append(ChronoNote(note["text"], datetime.fromisoformat(note["datetime"])))
         for day in d["days"].values():
-            day_date=date_from_str(day["date"])
             events=[ChronoEvent(start=event["start"], end=event["end"], what=event["what"], tags=event["tags"]) for event in day["events"]]
-            sevents=[ChronoTime(start=event["start"], what=event["what"], tags=event["tags"]) for event in day["sevents"]]
             sport={sport:day["sport"][sport] for sport in day["sport"].keys()}
             p.add_day(ChronoDay(events=events, input_date=day["date"], day_start=day["day_start"], day_end=day["day_end"]))
-            for ctime in sevents:
-                p.days[day["date"]].add_silent(ctime)
             for run in sport["runs"]:
                 p.days[day["date"]].add_run(ChronoRunningEvent(run["time"],run["distance"],time_from_str(run["start_time"])))
             for situp in sport["situps"]:
@@ -806,6 +799,7 @@ class ChronoClient:
             for pushup in sport["pushups"]:
                 p.days[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time_from_str(pushup["start_time"])))
         self.project=p
+        self.project.sevents=[ChronoTime(sevent["tdate"], start=sevent["start"], what=sevent["what"], tags=sevent["tags"]) for sevent in d["sevents"]]
         self.add_commands()
         self.project.set_alias(self.command_set)
 

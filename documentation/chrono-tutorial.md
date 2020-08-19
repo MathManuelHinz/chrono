@@ -283,7 +283,7 @@ mkTime "Super important deadline" job,deadline,programming 17:59 2020-12-13
 
 times takes **1** argument and prints the ChronoTimes for the next $days days:
 
-1. days : The amount of days considered (starting from the current day). Should be at least 1. If no argument is given days=1 will be inferred. 
+1. days : The amount of days considered (starting from the current day). Should be at least 0. If no argument is given days=1 will be inferred. 
 
 Example:
 

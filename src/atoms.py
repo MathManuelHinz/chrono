@@ -1,6 +1,6 @@
 from typing import (Dict, List, Union)
-from datetime import (time, datetime)
-from src.helper import time_from_str
+from datetime import (time, datetime,date)
+from src.helper import (time_from_str, date_from_str)
 
 class ChronoTime:
     """ This class should be used for very short events, such as deadlines."""
@@ -8,14 +8,16 @@ class ChronoTime:
     start:time
     what:str
     tags:List[str]
+    tdate:date
 
-    def __init__(self, start:str, what:str, tags:List[str]=[]):
+    def __init__(self, tdate:str, start:str, what:str, tags:List[str]=[]):
         """Constructor: ChronoTime. start input will be converted to a time object, 
         the other inputs will be used as attributes. 
         Attributes:
             start: Should be of the form HH:MM
             what: Should be a reasonably short string
             tags: Should be a list of tags, seperated by "," given as a single string"""
+        self.tdate=date_from_str(tdate)
         self.start=time_from_str(start)
         self.what=what
         self.tags=tags
@@ -23,6 +25,7 @@ class ChronoTime:
     def to_dict(self)->Dict[str, Union[str, List[str]]]:
         """Used to save the object as a json."""
         d=dict()
+        d["tdate"]=self.tdate.isoformat() #YYYY-MM-DD
         d["start"]=self.start.isoformat() #HH:MM:SS
         d["what"]=self.what
         d["tags"]=self.tags
@@ -30,7 +33,7 @@ class ChronoTime:
 
     def __repr__(self)->str:
         """Returns a string representation of this object. Used by the command times"""
-        return f"Time: {self.start}, what: {self.what}"
+        return f"Date: {self.tdate}, time: {self.start}, what: {self.what}"
 
 
 class ChronoEvent:
