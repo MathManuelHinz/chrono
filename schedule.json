@@ -1,32 +1,32 @@
 [
     [
         [
-            {"start": "12:00", "end": "13:00", "what":"Essen", "tags":["leben"]},
-            {"start": "18:00", "end": "19:00", "what":"Essen", "tags":["leben"]}
+            {"start": "12:00", "end": "13:00", "what":"Lunch", "tags":["other"]},
+            {"start": "18:00", "end": "19:00", "what":"Dinner", "tags":["other"]}
         ],
         [  
-            {"start": "12:00", "end": "13:00", "what":"Essen", "tags":["leben"]},
-            {"start": "18:00", "end": "19:00", "what":"Essen", "tags":["leben"]}
+            {"start": "12:00", "end": "13:00", "what":"Lunch", "tags":["other"]},
+            {"start": "18:00", "end": "19:00", "what":"Dinner", "tags":["other"]}
         ],
         [
-            {"start": "12:00", "end": "13:00", "what":"Essen", "tags":["leben"]},
-            {"start": "18:00", "end": "19:00", "what":"Essen", "tags":["leben"]}
+            {"start": "12:00", "end": "13:00", "what":"Lunch", "tags":["other"]},
+            {"start": "18:00", "end": "19:00", "what":"Dinner", "tags":["other"]}
         ],
         [
-            {"start": "12:00", "end": "13:00", "what":"Essen", "tags":["leben"]},
-            {"start": "18:00", "end": "19:00", "what":"Essen", "tags":["leben"]}
+            {"start": "12:00", "end": "13:00", "what":"Lunch", "tags":["other"]},
+            {"start": "18:00", "end": "19:00", "what":"Dinner", "tags":["other"]}
         ],
         [
-            {"start": "12:00", "end": "13:00", "what":"Essen", "tags":["leben"]},
-            {"start": "18:00", "end": "19:00", "what":"Essen", "tags":["leben"]}
+            {"start": "12:00", "end": "13:00", "what":"Lunch", "tags":["other"]},
+            {"start": "18:00", "end": "19:00", "what":"Dinner", "tags":["other"]}
         ],
         [
-            {"start": "12:00", "end": "13:00", "what":"Essen", "tags":["leben"]},
-            {"start": "18:00", "end": "19:00", "what":"Essen", "tags":["leben"]}
+            {"start": "12:00", "end": "13:00", "what":"Lunch", "tags":["other"]},
+            {"start": "18:00", "end": "19:00", "what":"Dinner", "tags":["other"]}
         ],
         [
-            {"start": "12:00", "end": "13:00", "what":"Essen", "tags":["leben"]},
-            {"start": "18:00", "end": "19:00", "what":"Essen", "tags":["leben"]}
+            {"start": "12:00", "end": "13:00", "what":"Lunch", "tags":["other"]},
+            {"start": "18:00", "end": "19:00", "what":"Dinner", "tags":["other"]}
         ]
     ]
 ]

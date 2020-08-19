@@ -1,4 +1,4 @@
-# MSSH.Chrono
+# MSSH.chrono
  
 More information coming, soon. For now:
 
