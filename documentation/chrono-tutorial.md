@@ -235,6 +235,27 @@ note My note contains spaces
 
 ### notes
 
+notes takes **0** arguments. The command just prints every note to the command line (FIFO).
+
+### deln
+
+deln takes **1-n** arguments which will be combined to **1** argument by concatenating the n arguments split up by spaces. deln deletes all notes with the exact same argument.
+
+1. text: the text.
+2. *texts: the other n-1 arguments.
+
+Examples:
+
+Both of these commands do the exact same thing:
+
+```
+deln "My note contains spaces"
+```
+
+```
+deln My note contains spaces
+```
+
 ### mkTime
 
 A ChronoTime should describe an instantaneous event (like a deadline). 
