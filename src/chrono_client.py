@@ -712,6 +712,7 @@ class ChronoClient:
         project.save()
         self.build_ChronoProject()
         project.load_settings()
+        project.set_alias()
         return reference
 
     def c_restore(self, project:ChronoProject, reference:str, code:str=0)->str:
