@@ -387,3 +387,7 @@ A real life example: While coding and documenting chrono, I wanted to create chr
 ```
 
 Notice how you can use escaped double quotes to account for spaces in arguments.
+
+## Structure 
+
+![](ChronoStructure.svg)

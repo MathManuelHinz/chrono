@@ -28,7 +28,7 @@ class ChronoDay:
     events:List[ChronoEvent]
     date:date
     silent_events:List[ChronoTime]
-    sport:Dict[str, ChronoSportEvent]
+    sport:Dict[str, List[ChronoSportEvent]]
 
 
     def __init__(self, events:List[ChronoEvent], input_date:str,day_start:str=None, day_end:str=None):
