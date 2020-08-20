@@ -740,7 +740,7 @@ class ChronoClient:
         project.save()
         self.build_ChronoProject()
         project.load_settings()
-        project.set_alias()
+        #project.set_alias() # doesn't work: needs a command set
         return reference
 
     def c_restore(self, project:ChronoProject, reference:str, code:str=0)->str:
