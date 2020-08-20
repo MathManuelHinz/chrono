@@ -1,5 +1,6 @@
 import json
 import logging
+from logging import log
 import os
 import shutil
 import subprocess
@@ -19,6 +20,8 @@ from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent,
 
 from src.atoms import (ChronoEvent, ChronoTime, ChronoNote)
 
+from src.oura import get_sleep
+
 class ChronoDay:
     """This class is used to organize ChronoEvent- and  ChronoTimes-objects. 
     Each page in the exported pdf should correspond to one ChronoDay-object."""
@@ -29,6 +32,7 @@ class ChronoDay:
     date:date
     silent_events:List[ChronoTime]
     sport:Dict[str, List[ChronoSportEvent]]
+    sleep:List[time]
 
 
     def __init__(self, events:List[ChronoEvent], input_date:str,day_start:str=None, day_end:str=None):
@@ -56,6 +60,7 @@ class ChronoDay:
         self.date=date_from_str(input_date)
         self.silent_events=[]
         self.sport={"runs":[],"pushups":[],"planks":[],"situps":[]}
+        self.sleep=[]
 
     def __repr__(self)->str:
         """Returns a string representation of this object. Used by the command today"""
@@ -132,6 +137,7 @@ class ChronoDay:
         d["date"]=self.date.__str__()
         d["events"]=[event.to_dict() for event in self.events]
         d["sport"]={key:[entry.to_dict() for entry in self.sport[key]] for key in self.sport.keys()}
+        d["sleep"]=[str(t) for t in self.sleep]
         return d
 
     def add_run(self, run:ChronoRunningEvent):
@@ -692,6 +698,28 @@ class MSSH:
         project.days = {key:tmp[key] for key in tmp.keys() if tmp[key].date >splitdate}
         project.save()
         return reference
+
+    @staticmethod
+    def c_oura_sleep(project:ChronoProject, reference:str, start:str, stop:str)->str:
+        ds=[day.date for day in project.days.values()]
+        if start=="start": start=min(ds).isoformat()
+        if stop=="stop": stop=max(ds).isoformat()
+        if project.settings["oura"]:
+            sleepdata=get_sleep(start_date=start,stop_date=stop,code=project.settings["oura_key"])
+            if sleepdata[0]:
+                keys=project.days.keys()
+                for key in sleepdata[1].keys():
+                    if key in keys:
+                        ss=time_from_str(sleepdata[1][key][0])
+                        se=time_from_str(sleepdata[1][key][1])
+                        project.days[key].sleep=[ss,se]
+            else:
+                print("False response")
+            logging.warn("False response")   
+        else:
+            print("No oura is linked: Check your settings")
+            logging.warn("No oura is linked: Check your settings")   
+        return reference 
      
 
 
