@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from src.helper import (get_color, get_intersect, list_to_string, split_command,
                     write_table,get_seconds, get_lambda, time_from_str, date_from_str, get_tf_length, 
-                    WEEKDAYS, MSSH_color_scheme)
+                    WEEKDAYS, MSSH_color_scheme, SECONDS_IN_A_DAY, seconds_to_time)
 
 from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
                    ChronoPushUpEvent, ChronoSportEvent)
@@ -721,7 +721,7 @@ class MSSH:
     @staticmethod
     def c_get_sleep(project:ChronoProject, reference:str, sdate:str)->str:
         if sdate in project.days.keys():
-            print(list(map(lambda x: x.isoformat(), project.days[sdate].sleep)))
+            print(f"Sleep: {list(map(lambda x: x.isoformat(), project.days[sdate].sleep))} => {seconds_to_time(seconds=SECONDS_IN_A_DAY-get_tf_length(project.days[sdate].sleep)).isoformat()}")
         return reference
 
     @staticmethod
@@ -729,7 +729,12 @@ class MSSH:
         if sdate in project.days.keys():
             project.days[sdate].sleep=[time_from_str(start),time_from_str(stop)]
         return reference
-     
+    
+    @staticmethod
+    def c_last_night_sleep(project:ChronoProject, reference:str)->str:
+        yesterday=(date_from_str(reference)+timedelta(days=-1)).isoformat()
+        MSSH.c_get_sleep(project, reference, yesterday)
+        return reference
 
 
 class ChronoClient:

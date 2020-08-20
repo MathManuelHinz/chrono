@@ -5,6 +5,8 @@ from datetime import datetime, date, time
 
 WEEKDAYS=["Monday", "Tuesday", "Wendsday", "Thursday", "Friday","Saturday", "Sunday"]
 
+SECONDS_IN_A_DAY=86400
+
 MSSH_color_scheme:Dict[str, str]={
     "default":"black",
     "leben":"black",
@@ -88,4 +90,13 @@ def date_from_str(str_date:str)->date:
 
 def get_tf_length(tf:Tuple[time, time])->int:
     """Returns the length of a timeframe."""
-    return (tf[1].hour-tf[0].hour)*60*60+(tf[1].minute-tf[0].minute)*60+(tf[1].second-tf[0].second)
+    return abs((tf[1].hour-tf[0].hour)*60*60+(tf[1].minute-tf[0].minute)*60+(tf[1].second-tf[0].second))
+
+def seconds_to_time(seconds:int)->time:
+    """Converts seconds to a time object."""
+    seconds = seconds % (24 * 3600) 
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    return time(hour=hours,minute=minutes,second=seconds) 

@@ -38,5 +38,6 @@ MSSH_COMMS={
     "ouras": MSSH.c_oura_sleep,
     "gets": MSSH.c_get_sleep,
     "sets": MSSH.c_set_sleep,
+    "lns":MSSH.c_last_night_sleep,
     "debug": lambda _,b,*x: print(b,x)
 }
