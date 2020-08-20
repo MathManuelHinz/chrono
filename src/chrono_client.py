@@ -713,13 +713,22 @@ class MSSH:
                         ss=time_from_str(sleepdata[1][key][0])
                         se=time_from_str(sleepdata[1][key][1])
                         project.days[key].sleep=[ss,se]
-            else:
-                print("False response")
-            logging.warn("False response")   
         else:
             print("No oura is linked: Check your settings")
             logging.warn("No oura is linked: Check your settings")   
         return reference 
+
+    @staticmethod
+    def c_get_sleep(project:ChronoProject, reference:str, sdate:str)->str:
+        if sdate in project.days.keys():
+            print(list(map(lambda x: x.isoformat(), project.days[sdate].sleep)))
+        return reference
+
+    @staticmethod
+    def c_set_sleep(project:ChronoProject, reference:str, sdate:str, start:str, stop:str)->str:
+        if sdate in project.days.keys():
+            project.days[sdate].sleep=[time_from_str(start),time_from_str(stop)]
+        return reference
      
 
 

@@ -36,5 +36,7 @@ MSSH_COMMS={
     "heatmap":MSSH.c_heatmap,
     "split": MSSH.c_split_project,
     "ouras": MSSH.c_oura_sleep,
+    "gets": MSSH.c_get_sleep,
+    "sets": MSSH.c_set_sleep,
     "debug": lambda _,b,*x: print(b,x)
 }
