@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from src.helper import (get_color, get_intersect, list_to_string, split_command,
                     write_table,get_seconds, get_lambda, time_from_str, date_from_str, get_tf_length, 
-                    WEEKDAYS, MSSH_color_scheme, SECONDS_IN_A_DAY, seconds_to_time)
+                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time)
 
 from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
                    ChronoPushUpEvent, ChronoSportEvent)
@@ -156,6 +156,10 @@ class ChronoDay:
         """Adds a plank event to the "plank" list."""
         self.sport["planks"].append(plank)
 
+    def get_sleep(self)->time:
+        return sleepdata_to_time(self.sleep)
+        #return seconds_to_time(seconds=int(self.sleep[2])*(SECONDS_IN_A_DAY)-get_tf_length(self.sleep))
+
 class ChronoSchedule:
     
     days:List[List[List[ChronoEvent]]]
@@ -180,6 +184,7 @@ class ChronoProject:
     schedule:ChronoSchedule
     schedulemod:int
     scheme:Dict[str, str]
+    day_zero_sleep:Tuple[time,time,bool]
 
     def __init__(self, name:str, path:str):
         """Constructor of ChronoProject."""
@@ -191,6 +196,7 @@ class ChronoProject:
         self.header=["\\documentclass{article}"]
         self.scheme=MSSH_color_scheme
         self.load_settings()
+        self.day_zero_sleep=()
 
     def set_schedule(self,schedule:ChronoSchedule)->None:
         """Sets the schedule for this project."""
@@ -332,7 +338,15 @@ class MSSH:
             raise Exception("start can't be the same as end")
         if reference in project.days.keys():
             try:
-                project.add_event(ChronoEvent(start=start, end=end, what=what, tags=tags.split(",")), reference, force=int(force))
+                if time_from_str(start) <= time_from_str(end):
+                    project.add_event(ChronoEvent(start=start, end=end, what=what, tags=tags.split(",")), reference, force=int(force))
+                else:
+                    next_day=date_from_str(reference)+timedelta(days=1)
+                    print("Creating 2 Events ...")
+                    logging.info("Creating 2 Events ...")
+                    project.add_event(ChronoEvent(start=start, end="23:59", what=what, tags=tags.split(",")), reference, force=int(force))
+                    project.add_day(ChronoDay(input_date=next_day.isoformat(), events=[], day_start="00:00", day_end=end))
+                    project.add_event(ChronoEvent(start="00:00", end=end, what=what, tags=tags.split(",")), reference, force=int(force))
             except Exception as e:
                 print(e)
                 logging.info(e)
@@ -533,9 +547,21 @@ class MSSH:
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
         days = list(sorted(project.days.values(), key=lambda x: x.date))
+        if project.day_zero_sleep==():
+            ys["sleep"].append(0)
+        else:
+            sleep=project.day_zero_sleep
+            ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
         for day in days:
             for tag in tags:
-                ys[tag].append(get_time(day, tag))
+                if not tag=="sleep":
+                    ys[tag].append(get_time(day, tag))
+                elif project.settings["oura"]:
+                    if not day.sleep == []:
+                        ys["sleep"].append(get_seconds(day.get_sleep())/3600)
+                    else:
+                        ys["sleep"].append(0)
+        ys["sleep"]=ys["sleep"][:-1]
         corr=[0 for day in days]
         for i in range(n):
            corr[i]=get_intersect_sum(days[i], tags)
@@ -545,8 +571,8 @@ class MSSH:
                 if not (I:=get_intersect(tags, event.tags))==[]:
                     corr[i] += ((datetime.combine(date.today(), event.end)\
                      - datetime.combine(date.today(), event.start))\
-                .seconds/3600)*(len(I)-1)
-        ys["sum"]=[sum([ys[tag][i] for tag in tags])-corr[i] for i in range(n)] #fix here
+                .seconds/3600)*(len(I)-1) 
+        ys["sum"]=[sum([ys[tag][i] for tag in tags if not tag=="sleep"])-corr[i] for i in range(n)] #fix here
         ax=plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
@@ -574,13 +600,25 @@ class MSSH:
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
         days = list(sorted(project.days.values(), key=lambda x: x.date))
+        if project.day_zero_sleep==():
+            ys["sleep"].append(0)
+        else:
+            sleep=project.day_zero_sleep
+            ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
         for day in days:
             for tag in tags:
-                ys[tag].append(get_time(day, tag))
+                if not tag=="sleep":
+                    ys[tag].append(get_time(day, tag))
+                elif project.settings["oura"]:
+                    if not day.sleep == []:
+                        ys["sleep"].append(get_seconds(day.get_sleep())/3600)
+                    else:
+                        ys["sleep"].append(0)
+        ys["sleep"]=ys["sleep"][:-1]
         corr=[0 for day in days]
         for i in range(n):
             corr[i]=get_intersect_sum(days[i], tags)
-        ys["sum"]=[sum([ys[tag][i] for tag in tags])-corr[i] for i in range(n)]
+        ys["sum"]=[sum([ys[tag][i] for tag in tags if not tag=="sleep"])-corr[i] for i in range(n)]
         ax=plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
@@ -640,7 +678,7 @@ class MSSH:
     @staticmethod
     def c_add_run(project:ChronoProject, reference:str, start_time:str, run_time:str, distance:str)->str:
         """Adds a ChronoRunEvent based on:"""
-        project.days[date.today().isoformat()].add_run(ChronoRunningEvent(float(run_time),float(distance),time(int(start_time[0:2]), int(start_time[3:]))))
+        project.days[reference].add_run(ChronoRunningEvent(float(run_time),float(distance),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
@@ -701,8 +739,9 @@ class MSSH:
 
     @staticmethod
     def c_oura_sleep(project:ChronoProject, reference:str, start:str, stop:str)->str:
+        getzeroday=start=="start"
         ds=[day.date for day in project.days.values()]
-        if start=="start": start=min(ds).isoformat()
+        if start=="start": start=(min(ds)+timedelta(days=-1)).isoformat()
         if stop=="stop": stop=max(ds).isoformat()
         if project.settings["oura"]:
             sleepdata=get_sleep(start_date=start,stop_date=stop,code=project.settings["oura_key"])
@@ -712,7 +751,11 @@ class MSSH:
                     if key in keys:
                         ss=time_from_str(sleepdata[1][key][0])
                         se=time_from_str(sleepdata[1][key][1])
-                        project.days[key].sleep=[ss,se]
+                        project.days[key].sleep=[ss,se,sleepdata[1][key][2]]
+            if getzeroday:
+                ss=time_from_str(sleepdata[1][start][0])
+                se=time_from_str(sleepdata[1][start][1])
+                project.day_zero_sleep=[ss,se,sleepdata[1][start][2]]
         else:
             print("No oura is linked: Check your settings")
             logging.warn("No oura is linked: Check your settings")   
@@ -721,13 +764,13 @@ class MSSH:
     @staticmethod
     def c_get_sleep(project:ChronoProject, reference:str, sdate:str)->str:
         if sdate in project.days.keys():
-            print(f"Sleep: {list(map(lambda x: x.isoformat(), project.days[sdate].sleep))} => {seconds_to_time(seconds=SECONDS_IN_A_DAY-get_tf_length(project.days[sdate].sleep)).isoformat()}")
+            print(f"Sleep: {list(map(lambda x: x.isoformat(), project.days[sdate].sleep[0:2]))} => {project.days[sdate].get_sleep().isoformat()}")
         return reference
 
     @staticmethod
-    def c_set_sleep(project:ChronoProject, reference:str, sdate:str, start:str, stop:str)->str:
+    def c_set_sleep(project:ChronoProject, reference:str, sdate:str, start:str, stop:str,sameday:str="1")->str:
         if sdate in project.days.keys():
-            project.days[sdate].sleep=[time_from_str(start),time_from_str(stop)]
+            project.days[sdate].sleep=[time_from_str(start),time_from_str(stop),sameday]
         return reference
     
     @staticmethod
@@ -856,6 +899,8 @@ class ChronoClient:
                 p.days[day["date"]].add_plank(ChronoPlankEvent(plank["time"],time_from_str(plank["start_time"])))
             for pushup in sport["pushups"]:
                 p.days[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time_from_str(pushup["start_time"])))
+            if day["sleep"]==[]: pass
+            else: p.days[day["date"]].sleep=(time_from_str(day["sleep"][0]),time_from_str(day["sleep"][1]),bool(day["sleep"][2]))
         self.project=p
         self.project.sevents=[ChronoTime(sevent["tdate"], start=sevent["start"], what=sevent["what"], tags=sevent["tags"]) for sevent in d["sevents"]]
         self.add_commands()
@@ -903,4 +948,3 @@ def check_in_timeframe(tf:Tuple[time, time], event:ChronoEvent)->bool:
     """
     return (tf[0]<= event.start and event.start < tf[1]) or (tf[0]< event.end and event.end <= tf[1])\
             or (event.start <= tf[0] and tf[0]<event.end) or (event.start < tf[1] and tf[1]<=event.end)
-

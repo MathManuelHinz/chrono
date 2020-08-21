@@ -94,9 +94,13 @@ def get_tf_length(tf:Tuple[time, time])->int:
 
 def seconds_to_time(seconds:int)->time:
     """Converts seconds to a time object."""
+    seconds=abs(seconds)
     seconds = seconds % (24 * 3600) 
     hours = seconds // 3600
     seconds %= 3600
     minutes = seconds // 60
     seconds %= 60
     return time(hour=hours,minute=minutes,second=seconds) 
+
+def sleepdata_to_time(sleepdata:Tuple[time,time,bool])->time:
+    return seconds_to_time(seconds=int(sleepdata[2])*(SECONDS_IN_A_DAY)-get_tf_length(sleepdata))
