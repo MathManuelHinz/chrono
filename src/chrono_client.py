@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from src.helper import (get_color, get_intersect, list_to_string, split_command,
                     write_table,get_seconds, get_lambda, time_from_str, date_from_str, get_tf_length, 
-                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time)
+                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time,cursed_get_lambda)
 
 from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
                    ChronoPushUpEvent, ChronoSportEvent)
@@ -212,7 +212,7 @@ class ChronoProject:
 
     def set_alias(self, cmds:Dict[str,Callable])->None:
         """Creates the alias Dict. Needs load_settings to be called first"""
-        self.alias={key:get_lambda(self.settings["alias"][key], cmds) for key in self.settings["alias"].keys()}
+        self.alias={key:cursed_get_lambda(self.settings["alias"][key], cmds) for key in self.settings["alias"].keys()}
 
     def add_note(self, note:ChronoNote)->None:
         """ Adds a note to the todo list."""

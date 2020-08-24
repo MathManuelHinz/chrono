@@ -74,6 +74,12 @@ def split_command(command:str)->List[str]:
 def get_seconds(t:time)->int:
     """Returns the seconds in a time object."""
     return t.second + t.minute*60 + t.hour*60*60
+    
+def cursed_get_lambda(alias:str,cmds=Dict[str, Callable]):
+    """Turns an alias (see alias documentation) into a function."""
+    get_cmds=(alias.split(" |> ")) #auf f# angelehnt :)
+    splitcmds=[split_command(cmd) for cmd in get_cmds]
+    return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in sc[1:]]), splitcmds, xs[1]))
 
 def get_lambda(alias:str,cmds=Dict[str, Callable]):
     """Turns an alias (see alias documentation) into a function."""
