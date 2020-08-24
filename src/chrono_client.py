@@ -305,6 +305,9 @@ class ChronoProject:
         """Adds a ChronoTime to sevents."""
         self.sevents.append(stime)
 
+    def analysis_get(self, discriminator:Callable[[ChronoDay],bool])->List[ChronoDay]:
+        return [day for day in self.days.values() if discriminator(day)]
+
 class MSSH:
 
     @staticmethod
@@ -539,14 +542,19 @@ class MSSH:
             raise Exception("unknown mode")
     
     @staticmethod
-    def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe,programming")->str:
+    def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe,programming", start_date:str="start", end_date:str="stop")->str:
         """Plots the hours of var:tags and their sum."""
         tags=tags.split(",")
-        n=len(project.days)
+        ds=[day.date for day in project.days.values()]
+        if start_date=="start": start_date=min(ds)
+        else: start_date=date_from_str(start_date)
+        if end_date=="stop": end_date=max(ds)
+        else: end_date=date_from_str(end_date)
         assert not "sum" in tags
+        days = list(sorted(project.analysis_get(lambda x: start_date<=x.date<=end_date), key=lambda x: x.date))
+        n=len(days)
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
-        days = list(sorted(project.days.values(), key=lambda x: x.date))
         if project.day_zero_sleep==():
             ys["sleep"].append(0)
         else:
@@ -580,7 +588,7 @@ class MSSH:
             plt.plot(xs, ys[tag], label=tag)
         if not days == []: 
             zeroday=days[0].date.weekday()
-            WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/len(wds) for wd in range(7)] 
+            WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(xs,[WDA[day.date.weekday()] for day in days],"--",label="wda")
         if (tmp := date.today()).isoformat() in project.days.keys():
             plt.scatter([d:=(tmp-days[0].date).days], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
@@ -591,12 +599,19 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_plot_week(project:ChronoProject, reference:str, tags:str="mathe,programming,korean", k:str="7")->str:
+    def c_plot_week(project:ChronoProject, reference:str, tags:str="mathe,programming,korean",start_date:str="start", end_date:str="stop",k:str="7")->str:
         """Plots the hours of var:tags and their sum."""
         k=int(k)
         tags=tags.split(",")
-        n=len(project.days)
+        ds=[day.date for day in project.days.values()]
+        if start_date=="start": start_date=min(ds)
+        else: start_date=date_from_str(start_date)
+        if end_date=="stop": end_date=max(ds)
+        else: end_date=date_from_str(end_date)
+        assert (end_date-start_date).days>=k
         assert not "sum" in tags
+        days = list(sorted(project.analysis_get(lambda x: start_date<=x.date<=end_date), key=lambda x: x.date))
+        n=len(days)
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
         days = list(sorted(project.days.values(), key=lambda x: x.date))
@@ -622,14 +637,20 @@ class MSSH:
         ax=plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-        tmp = date.today()
-        d=(tmp-days[0].date).days
+        tmp = min(date.today(),end_date)
+        d=(tmp-start_date).days
         week_splice=lambda x : x[d-k:d+1]
+        print(xs[2:8])
+        print(d,k)
+        print(week_splice(xs))
         for tag in ys.keys():
-            plt.plot(week_splice(xs), week_splice(ys[tag]), label=tag)
+            try: plt.plot(week_splice(xs), week_splice(ys[tag]), label=tag)
+            except:
+                print(tag)
+                print(week_splice(xs), week_splice(ys[tag]))
         if not days == []: 
             zeroday=days[0].date.weekday()
-            WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/len(wds) for wd in range(7)] 
+            WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(week_splice(xs),week_splice([WDA[day.date.weekday()] for day in days]),"--",label="wda")
         if tmp.isoformat() in project.days.keys():
             plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
@@ -662,11 +683,16 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_stats(project:ChronoProject, reference:str, tags:str)->str:
+    def c_stats(project:ChronoProject, reference:str, tags:str, start_date:str="start", end_date:str="stop")->str:
         """Displays stats for given tags."""
         tags=tags.split(",")
         hours=[]
-        days=list(project.days.values())
+        ds=[day.date for day in project.days.values()]
+        if start_date=="start": start_date=min(ds)
+        else: start_date=date_from_str(start_date)
+        if end_date=="stop": end_date=max(ds)
+        else: end_date=date_from_str(end_date)
+        days=list(project.analysis_get(lambda x: start_date<=x.date<=end_date))
         for tag in tags:
             hours=[]
             for day in days:
@@ -709,13 +735,19 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_heatmap(project:ChronoProject, reference:str, tag:str, yt:str)->str:
+    def c_heatmap(project:ChronoProject, reference:str, tag:str, yt:str, start_date:str="start", end_date:str="stop")->str:
         yt=int(yt)
-        c=24*60*60 
+        c=24*60*60
+        ds=[day.date for day in project.days.values()]
+        if start_date=="start": start_date=min(ds)
+        else: start_date=date_from_str(start_date)
+        if end_date=="stop": end_date=max(ds)
+        else: end_date=date_from_str(end_date)
+        days=list(project.analysis_get(lambda x: start_date<=x.date<=end_date)) 
         poi=list(project.get_poi())
         poi.sort()
         timeframes=[(poi[i],poi[i+1]) for i in range(len(poi)-1)]
-        events=list(filter(lambda a: tag in a[0].tags, reduce(lambda a,b: a+b, [[(event,day.date) for event in day.events]for day in project.days.values()])))
+        events=list(filter(lambda a: tag in a[0].tags, reduce(lambda a,b: a+b, [[(event,day.date) for event in day.events]for day in days])))
         heatmap=[[sum([1 for event in events if check_in_timeframe(tf, event[0]) and event[1].weekday()==i]) for tf in timeframes for _ in range(get_tf_length(tf))] for i in range(7)]
         heatmap=list(zip(*heatmap))
         plt.imshow(heatmap, cmap="hot",interpolation="nearest", aspect=14/c)
