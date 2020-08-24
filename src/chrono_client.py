@@ -32,7 +32,7 @@ class ChronoDay:
     date:date
     silent_events:List[ChronoTime]
     sport:Dict[str, List[ChronoSportEvent]]
-    sleep:List[time]
+    sleep:Tuple[time]
 
 
     def __init__(self, events:List[ChronoEvent], input_date:str,day_start:str=None, day_end:str=None):
@@ -166,7 +166,7 @@ class ChronoSchedule:
 
     def __init__(self, path):
         """Constructor of ChronoSchedule."""
-        with open(path, "r+", encoding="utf-8") as f:
+        with open("data/"+path, "r+", encoding="utf-8") as f:
             data=json.load(f)
         self.days=[[[] for _ in range(7)]for i in range(len(data))]
         for i,week in enumerate(data):
@@ -206,7 +206,7 @@ class ChronoProject:
 
     def load_settings(self)->None:
         """ Loads settings from "settings.json"."""
-        with open("settings.json", "r+", encoding="utf-8") as f:
+        with open("data/settings.json", "r+", encoding="utf-8") as f:
             self.settings=json.load(f)
         self.scheme=self.settings["color_scheme"]
 
@@ -289,7 +289,7 @@ class ChronoProject:
         export["path"]=path
         export["days"]={key:self.days[key].to_dict() for key in self.days.keys()}
         export["sevents"]=[sev.to_dict() for sev in self.sevents]
-        with open(path+".json", "w+", encoding="utf-8") as f:
+        with open("data/"+path+".json", "w+", encoding="utf-8") as f:
             json.dump(export, f)
 
     def get_poi(self)->Set[time]:
@@ -555,21 +555,23 @@ class MSSH:
         n=len(days)
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
-        if project.day_zero_sleep==():
-            ys["sleep"].append(0)
-        else:
-            sleep=project.day_zero_sleep
-            ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
+        
+        if "sleep" in tags:
+            if project.day_zero_sleep==():
+                ys["sleep"].append(0)
+            else:
+                sleep=project.day_zero_sleep
+                ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
         for day in days:
             for tag in tags:
                 if not tag=="sleep":
                     ys[tag].append(get_time(day, tag))
                 elif project.settings["oura"]:
-                    if not day.sleep == []:
+                    if not day.sleep == ():
                         ys["sleep"].append(get_seconds(day.get_sleep())/3600)
                     else:
                         ys["sleep"].append(0)
-        ys["sleep"]=ys["sleep"][:-1]
+        if "sleep" in tags: ys["sleep"]=ys["sleep"][:-1]
         corr=[0 for day in days]
         for i in range(n):
            corr[i]=get_intersect_sum(days[i], tags)
@@ -625,7 +627,7 @@ class MSSH:
                 if not tag=="sleep":
                     ys[tag].append(get_time(day, tag))
                 elif project.settings["oura"]:
-                    if not day.sleep == []:
+                    if not day.sleep == ():
                         ys["sleep"].append(get_seconds(day.get_sleep())/3600)
                     else:
                         ys["sleep"].append(0)
@@ -640,9 +642,6 @@ class MSSH:
         tmp = min(date.today(),end_date)
         d=(tmp-start_date).days
         week_splice=lambda x : x[d-k:d+1]
-        print(xs[2:8])
-        print(d,k)
-        print(week_splice(xs))
         for tag in ys.keys():
             try: plt.plot(week_splice(xs), week_splice(ys[tag]), label=tag)
             except:
@@ -863,7 +862,7 @@ class ChronoClient:
 
     def c_save(self, project:ChronoProject, reference:str)->str:
         """Saves the project."""
-        shutil.copy(project.path+".json", project.path+"_backup.json")
+        shutil.copy("data/"+project.path+".json", "data/"+project.path+"_backup.json")
         project.save()
         return reference
 
@@ -914,7 +913,7 @@ class ChronoClient:
     def build_ChronoProject(self, path:str=None)->ChronoProject:
         """ Builds a ChronoProject from a given path. """
         if path == None: path=self.path
-        with open(path+".json", "r+", encoding="utf-8") as f:
+        with open("data/"+path+".json", "r+", encoding="utf-8") as f:
             d=json.load(f)
         p=ChronoProject(name=d["name"], path=d["path"])
         for note in d["todo"]:
@@ -931,7 +930,8 @@ class ChronoClient:
                 p.days[day["date"]].add_plank(ChronoPlankEvent(plank["time"],time_from_str(plank["start_time"])))
             for pushup in sport["pushups"]:
                 p.days[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time_from_str(pushup["start_time"])))
-            if day["sleep"]==[]: pass
+            if not "sleep" in day.keys(): p.days[day["date"]].sleep=()
+            elif day["sleep"]==[]: p.days[day["date"]].sleep=()
             else: p.days[day["date"]].sleep=(time_from_str(day["sleep"][0]),time_from_str(day["sleep"][1]),bool(day["sleep"][2]))
         self.project=p
         self.project.sevents=[ChronoTime(sevent["tdate"], start=sevent["start"], what=sevent["what"], tags=sevent["tags"]) for sevent in d["sevents"]]
