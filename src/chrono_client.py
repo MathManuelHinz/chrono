@@ -12,7 +12,7 @@ from typing import (Callable, Dict, List, Tuple, Union, Set)
 import matplotlib.pyplot as plt
 
 from src.helper import (get_color, get_intersect, list_to_string, seconds_to_time, split_command,
-                    write_table,get_seconds, get_lambda, time_from_str, date_from_str, get_tf_length, 
+                    write_table,get_seconds, time_from_str, date_from_str, get_tf_length, 
                     WEEKDAYS, MSSH_color_scheme, sleepdata_to_time,cursed_get_lambda)
 
 from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
@@ -409,7 +409,7 @@ class MSSH:
     def c_clear(project:ChronoProject, reference:str, code:str="0")->str:
         """Saves the project to a backup and deletes all days if the var:code is correct."""
         if code == project.settings["code"]:
-            project.save(path="backup") 
+            project.save(path=project.path+"_backup") 
             project.days={}
         else:
             logging.warning(f"wrong code: {code}")
@@ -419,7 +419,7 @@ class MSSH:
     def c_clear_future(project:ChronoProject, reference:str, code:str="0")->str:
         """Clears all days in the future if the var:code is correct."""
         if code==project.settings["code"]:
-            project.save(path="backup") 
+            project.save(path=project.path+"_backup") 
             keys=[]
             for key in project.days.keys():
                 if project.days[key].date > date.today():
@@ -856,8 +856,8 @@ class ChronoClient:
         """Restores a project from a backup."""
         if code==project.settings["code"]:
             tmp=project.path
-            if os.path.isfile("backup.json"):
-                self.build_ChronoProject(path="backup")
+            if os.path.isfile(project.path+"_backup.json"):
+                self.build_ChronoProject(path=project.path+"_backup")
                 self.project.path=tmp
             else:
                 print("no backup available")
