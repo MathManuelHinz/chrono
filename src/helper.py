@@ -76,8 +76,8 @@ def get_seconds(t:time)->int:
     return t.second + t.minute*60 + t.hour*60*60
     
 def cursed_get_lambda(alias:str,cmds=Dict[str, Callable])->Callable:
-    """Turns an alias (see alias documentation) into a function. Works with multiple commands. Either cursed or genius, not sure."""
-    get_cmds=(alias.split(" |> ")) #auf f# angelehnt :)
+    """Turns an alias (see alias documentation) into a function. Works with multiple commands. Either cursed or genius, edit: definitely cursed."""
+    get_cmds=(alias.split(" |> ")) #Inspired by f#
     splitcmds=[split_command(cmd) for cmd in get_cmds]
     return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in sc[1:]]), splitcmds, xs[1]))
 
@@ -109,4 +109,4 @@ def seconds_to_time(seconds:int)->time:
     return time(hour=hours,minute=minutes,second=seconds) 
 
 def sleepdata_to_time(sleepdata:Tuple[time,time,bool])->time:
-    return seconds_to_time(seconds=int(sleepdata[2])*(SECONDS_IN_A_DAY)-get_tf_length(sleepdata))
+    return seconds_to_time(seconds=abs(get_tf_length(sleepdata)-int(sleepdata[2])*(SECONDS_IN_A_DAY)))

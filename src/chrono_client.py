@@ -60,7 +60,7 @@ class ChronoDay:
         self.date=date_from_str(input_date)
         self.silent_events=[]
         self.sport={"runs":[],"pushups":[],"planks":[],"situps":[]}
-        self.sleep=[]
+        self.sleep=()
 
     def __repr__(self)->str:
         """Returns a string representation of this object. Used by the command today"""
@@ -137,7 +137,8 @@ class ChronoDay:
         d["date"]=self.date.__str__()
         d["events"]=[event.to_dict() for event in self.events]
         d["sport"]={key:[entry.to_dict() for entry in self.sport[key]] for key in self.sport.keys()}
-        d["sleep"]=[str(t) for t in self.sleep]
+        if self.sleep==(): d["sleep"]=[]
+        else: d["sleep"]=[str(self.sleep[0]),str(self.sleep[1]),self.sleep[2]]
         return d
 
     def add_run(self, run:ChronoRunningEvent):
@@ -566,18 +567,17 @@ class MSSH:
                 ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
         for day in days:
             for tag in tags:
-                if not tag=="sleep":
+                if not tag in ["sleep",""]:
                     ys[tag].append(get_time(day, tag))
-                elif project.settings["oura"]:
+                elif tag=="sleep":
                     if not day.sleep == ():
                         ys["sleep"].append(get_seconds(day.get_sleep())/3600)
+                        print(day.date,ys["sleep"][-1])
                     else:
                         ys["sleep"].append(0)
-        if "sleep" in tags: ys["sleep"]=ys["sleep"][:-1]
-        corr=[0 for day in days]
-        for i in range(n):
-           corr[i]=get_intersect_sum(days[i], tags)
-        corr=[0 for day in days]
+        if "sleep" in tags: 
+            ys["sleep"]=ys["sleep"][:-1]
+        corr=[0 for _ in days]
         for i in range(n):
             for event in days[i].events:
                 if not (I:=get_intersect(tags, event.tags))==[]:
@@ -798,7 +798,7 @@ class MSSH:
     @staticmethod
     def c_get_sleep(project:ChronoProject, reference:str, sdate:str)->str:
         if sdate in project.days.keys():
-            print(f"Sleep: {list(map(lambda x: x.isoformat(), project.days[sdate].sleep[0:2]))} => {project.days[sdate].get_sleep().isoformat()}")
+            print(f"Sleep: {list(map(lambda x: x.isoformat(), project.days[sdate].sleep[0:2]))}: {project.days[sdate].sleep[2]} => {project.days[sdate].get_sleep().isoformat()}")
         return reference
 
     @staticmethod
@@ -831,6 +831,7 @@ class MSSH:
                 pace=seconds_to_time(int(lengths/distance))
                 print(f"{reference}: You ran {distance} in {lengtht}. That makes a pace of {pace.isoformat()[3:]} per kilometer.")
         return reference
+
 
 class ChronoClient:
 
@@ -953,7 +954,7 @@ class ChronoClient:
                 p.days[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time_from_str(pushup["start_time"])))
             if not "sleep" in day.keys(): p.days[day["date"]].sleep=()
             elif day["sleep"]==[]: p.days[day["date"]].sleep=()
-            else: p.days[day["date"]].sleep=(time_from_str(day["sleep"][0]),time_from_str(day["sleep"][1]),bool(day["sleep"][2]))
+            else: p.days[day["date"]].sleep=(time_from_str(day["sleep"][0]),time_from_str(day["sleep"][1]),day["sleep"][2])
         self.project=p
         self.project.sevents=[ChronoTime(sevent["tdate"], start=sevent["start"], what=sevent["what"], tags=sevent["tags"]) for sevent in d["sevents"]]
         self.add_commands()
