@@ -75,14 +75,14 @@ def get_seconds(t:time)->int:
     """Returns the seconds in a time object."""
     return t.second + t.minute*60 + t.hour*60*60
     
-def cursed_get_lambda(alias:str,cmds=Dict[str, Callable]):
-    """Turns an alias (see alias documentation) into a function."""
+def cursed_get_lambda(alias:str,cmds=Dict[str, Callable])->Callable:
+    """Turns an alias (see alias documentation) into a function. Works with multiple commands. Either cursed or genius, not sure."""
     get_cmds=(alias.split(" |> ")) #auf f# angelehnt :)
     splitcmds=[split_command(cmd) for cmd in get_cmds]
     return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in sc[1:]]), splitcmds, xs[1]))
 
 def get_lambda(alias:str,cmds=Dict[str, Callable]):
-    """Turns an alias (see alias documentation) into a function."""
+    """Turns an alias (see alias documentation) into a function. Deprecated?"""
     splitcmd=split_command(alias)
     return (lambda *xs: cmds[splitcmd[0]](xs[0],xs[1],*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in splitcmd[1:]]))
 

@@ -14,7 +14,7 @@ class ChronoRunningEvent(ChronoSportEvent):
         self.start_time=start_time
 
     def __repr__(self)->str:
-        return f"time:{self.time}, distance:{self.distance},start_time:{self.start_time}"
+        return f"[start_time:{self.start_time}, time:{self.time}, distance:{self.distance}]"
 
     def to_dict(self)->Dict[str, float]:
         iso=self.start_time.isoformat()

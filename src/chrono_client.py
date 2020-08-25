@@ -11,7 +11,7 @@ from typing import (Callable, Dict, List, Tuple, Union, Set)
 
 import matplotlib.pyplot as plt
 
-from src.helper import (get_color, get_intersect, list_to_string, split_command,
+from src.helper import (get_color, get_intersect, list_to_string, seconds_to_time, split_command,
                     write_table,get_seconds, get_lambda, time_from_str, date_from_str, get_tf_length, 
                     WEEKDAYS, MSSH_color_scheme, sleepdata_to_time,cursed_get_lambda)
 
@@ -308,6 +308,14 @@ class ChronoProject:
     def analysis_get(self, discriminator:Callable[[ChronoDay],bool])->List[ChronoDay]:
         return [day for day in self.days.values() if discriminator(day)]
 
+    def analysis_get_between(self, start_date:str,end_date:str)->List[ChronoDay]:
+        ds=[day.date for day in self.days.values()]
+        if start_date=="start": start_date=min(ds)
+        else: start_date=date_from_str(start_date)
+        if end_date=="stop": end_date=max(ds)
+        else: end_date=date_from_str(end_date)
+        return list(sorted(self.analysis_get(lambda x: start_date<=x.date<=end_date), key=lambda x: x.date))
+
 class MSSH:
 
     @staticmethod
@@ -545,17 +553,11 @@ class MSSH:
     def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe,programming", start_date:str="start", end_date:str="stop")->str:
         """Plots the hours of var:tags and their sum."""
         tags=tags.split(",")
-        ds=[day.date for day in project.days.values()]
-        if start_date=="start": start_date=min(ds)
-        else: start_date=date_from_str(start_date)
-        if end_date=="stop": end_date=max(ds)
-        else: end_date=date_from_str(end_date)
         assert not "sum" in tags
-        days = list(sorted(project.analysis_get(lambda x: start_date<=x.date<=end_date), key=lambda x: x.date))
+        days = project.analysis_get_between(start_date, end_date)
         n=len(days)
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
-        
         if "sleep" in tags:
             if project.day_zero_sleep==():
                 ys["sleep"].append(0)
@@ -605,23 +607,24 @@ class MSSH:
         """Plots the hours of var:tags and their sum."""
         k=int(k)
         tags=tags.split(",")
+        assert not "sum" in tags
         ds=[day.date for day in project.days.values()]
         if start_date=="start": start_date=min(ds)
         else: start_date=date_from_str(start_date)
         if end_date=="stop": end_date=max(ds)
         else: end_date=date_from_str(end_date)
         assert (end_date-start_date).days>=k
-        assert not "sum" in tags
-        days = list(sorted(project.analysis_get(lambda x: start_date<=x.date<=end_date), key=lambda x: x.date))
+        days=list(sorted(project.analysis_get(lambda x: start_date<=x.date<=end_date), key=lambda x: x.date))
         n=len(days)
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
         days = list(sorted(project.days.values(), key=lambda x: x.date))
-        if project.day_zero_sleep==():
-            ys["sleep"].append(0)
-        else:
-            sleep=project.day_zero_sleep
-            ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
+        if "sleep" in tags:
+            if project.day_zero_sleep==():
+                ys["sleep"].append(0)
+            else:
+                sleep=project.day_zero_sleep
+                ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
         for day in days:
             for tag in tags:
                 if not tag=="sleep":
@@ -631,8 +634,8 @@ class MSSH:
                         ys["sleep"].append(get_seconds(day.get_sleep())/3600)
                     else:
                         ys["sleep"].append(0)
-        ys["sleep"]=ys["sleep"][:-1]
-        corr=[0 for day in days]
+        if "sleep" in tags: ys["sleep"]=ys["sleep"][:-1]
+        corr=[0 for _ in days]
         for i in range(n):
             corr[i]=get_intersect_sum(days[i], tags)
         ys["sum"]=[sum([ys[tag][i] for tag in tags if not tag=="sleep"])-corr[i] for i in range(n)]
@@ -810,6 +813,24 @@ class MSSH:
         MSSH.c_get_sleep(project, reference, yesterday)
         return reference
 
+    @staticmethod
+    def c_show_run(project:ChronoProject, reference:str)->str:
+        if reference in project.days.keys():
+            print(project.days[reference].sport["runs"])
+        return reference
+
+    @staticmethod
+    def c_run_today(project:ChronoProject, reference:str)->str:
+        if reference in project.days.keys():
+            if project.days[reference].sport["runs"] == []:
+                print("no runs today :(")
+            else:
+                lengths=sum([run.time for run in project.days[reference].sport["runs"]])
+                lengtht=seconds_to_time(int(lengths))
+                distance=sum([run.distance for run in project.days[reference].sport["runs"]])
+                pace=seconds_to_time(int(lengths/distance))
+                print(f"{reference}: You ran {distance} in {lengtht}. That makes a pace of {pace.isoformat()[3:]} per kilometer.")
+        return reference
 
 class ChronoClient:
 

@@ -39,5 +39,7 @@ MSSH_COMMS={
     "gets": MSSH.c_get_sleep,
     "sets": MSSH.c_set_sleep,
     "lns":MSSH.c_last_night_sleep,
+    "shows":MSSH.c_show_run,
+    "runstats":MSSH.c_run_today,
     "debug": lambda _,b,*x: print(b,x)
 }
