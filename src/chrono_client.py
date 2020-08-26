@@ -454,10 +454,9 @@ class MSSH:
     @staticmethod
     def c_today(project:ChronoProject, reference:str)->str:
         """Prints the plan for today."""
-        if date.today().isoformat() in project.days.keys():
-            cr=date.today().isoformat()
-            project.days[cr].merge()
-            print(project.days[cr])
+        if reference in project.days.keys():
+            project.days[reference].merge()
+            print(project.days[reference])
         else:
             print("no plan for today")
         return reference
@@ -740,12 +739,7 @@ class MSSH:
     def c_heatmap(project:ChronoProject, reference:str, tag:str, yt:str, start_date:str="start", end_date:str="stop")->str:
         yt=int(yt)
         c=24*60*60
-        ds=[day.date for day in project.days.values()]
-        if start_date=="start": start_date=min(ds)
-        else: start_date=date_from_str(start_date)
-        if end_date=="stop": end_date=max(ds)
-        else: end_date=date_from_str(end_date)
-        days=list(project.analysis_get(lambda x: start_date<=x.date<=end_date)) 
+        days=project.analysis_get_between(start_date,end_date) 
         poi=list(project.get_poi())
         poi.sort()
         timeframes=[(poi[i],poi[i+1]) for i in range(len(poi)-1)]
