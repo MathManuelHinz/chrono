@@ -818,7 +818,6 @@ class MSSH:
         if reference in project.days.keys():
             print(project.days[reference].sport["runs"])
         return reference
-
     @staticmethod
     def c_run_today(project:ChronoProject, reference:str)->str:
         if reference in project.days.keys():
@@ -831,7 +830,6 @@ class MSSH:
                 pace=seconds_to_time(int(lengths/distance))
                 print(f"{reference}: You ran {distance} in {lengtht}. That makes a pace of {pace.isoformat()[3:]} per kilometer.")
         return reference
-
 
 class ChronoClient:
 

@@ -2,6 +2,7 @@ from subprocess import call
 from typing import Dict, List, Tuple, IO,Callable
 from functools import reduce
 from datetime import datetime, date, time
+from inspect import signature
 
 WEEKDAYS=["Monday", "Tuesday", "Wendsday", "Thursday", "Friday","Saturday", "Sunday"]
 
@@ -74,12 +75,17 @@ def split_command(command:str)->List[str]:
 def get_seconds(t:time)->int:
     """Returns the seconds in a time object."""
     return t.second + t.minute*60 + t.hour*60*60
-    
+
+def get_nargs(f:Callable)->int:
+    sig=signature(f)
+    return len(sig.parameters)
+
 def cursed_get_lambda(alias:str,cmds=Dict[str, Callable])->Callable:
     """Turns an alias (see alias documentation) into a function. Works with multiple commands. Either cursed or genius, edit: definitely cursed."""
     get_cmds=(alias.split(" |> ")) #Inspired by f#
     splitcmds=[split_command(cmd) for cmd in get_cmds]
-    return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in sc[1:]]), splitcmds, xs[1]))
+    
+    return (lambda *xs: reduce(lambda acc, sc: [cmds[sc[0]](xs[0],acc[0],*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in sc[1:]]), acc[1]+get_nargs(cmds[sc[0]])-2], splitcmds, [xs[1],0])[0])
 
 def get_lambda(alias:str,cmds=Dict[str, Callable]):
     """Turns an alias (see alias documentation) into a function. Deprecated?"""
