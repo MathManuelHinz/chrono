@@ -1,4 +1,6 @@
-from src.chrono_client import MSSH
+from typing import Callable, Dict
+from sport import ChronoRunningEvent
+from src.chrono_client import ChronoProject, MSSH
 
 MSSH_COMMS={
     "setr":MSSH.c_setr,
@@ -41,5 +43,6 @@ MSSH_COMMS={
     "lns":MSSH.c_last_night_sleep,
     "shows":MSSH.c_show_run,
     "runstats":MSSH.c_run_today,
+    "plotrun":MSSH.c_runplot,
     "debug": lambda _,b,*x: print(b,x)
 }

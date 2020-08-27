@@ -1,5 +1,5 @@
 from datetime import time
-from typing import (Dict, List)
+from typing import (Dict, List,Union)
 
 class ChronoSportEvent:
 
@@ -16,7 +16,7 @@ class ChronoRunningEvent(ChronoSportEvent):
     def __repr__(self)->str:
         return f"[start_time:{self.start_time}, time:{self.time}, distance:{self.distance}]"
 
-    def to_dict(self)->Dict[str, float]:
+    def to_dict(self)->Dict[str, Union[float,str]]:
         iso=self.start_time.isoformat()
         return {"time":self.time,"distance":self.distance,"start_time":iso[0:2]+":"+iso[3:5]}
 
@@ -30,7 +30,7 @@ class ChronoPushUpEvent(ChronoSportEvent):
     def __repr__(self)->str:
         return f"times:{self.times}, mults:{self.mults},start_time:{self.start_time}"
 
-    def to_dict(self)->Dict[str, float]:
+    def to_dict(self)->Dict[str, Union[List[float],List[int],str]]:
         iso=self.start_time.isoformat()
         return {"times":self.times,"mults":self.mults,"start_time":iso[0:2]+":"+iso[3:5]}
 
@@ -44,7 +44,7 @@ class ChronoSitUpsEvent(ChronoSportEvent):
     def __repr__(self)->str:
         return f"time:{self.time}, mult:{self.mult},start_time:{self.start_time}"
 
-    def to_dict(self)->Dict[str, float]:
+    def to_dict(self)->Dict[str, Union[float,int,str]]:
         iso=self.start_time.isoformat()
         return {"time":self.time,"mult":self.mult,"start_time":iso[0:2]+":"+iso[3:5]}
 
@@ -57,6 +57,6 @@ class ChronoPlankEvent(ChronoSportEvent):
     def __repr__(self)->str:
         return f"time:{self.time},start_time:{self.start_time}"
 
-    def to_dict(self)->Dict[str, float]:
+    def to_dict(self)->Dict[str, Union[float,str]]:
         iso=self.start_time.isoformat()
         return {"time":self.time,"start_time":iso[0:2]+":"+iso[3:5]}

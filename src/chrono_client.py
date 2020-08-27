@@ -1,13 +1,12 @@
 import json
 import logging
-from logging import log
 import os
 import shutil
 import subprocess
 from datetime import (date, datetime, time, timedelta)
 from functools import reduce
 from inspect import signature
-from typing import (Callable, Dict, List, Tuple, Union, Set)
+from typing import (Callable, Dict, List, Tuple, Union, Set, Optional)
 
 import matplotlib.pyplot as plt
 
@@ -186,6 +185,7 @@ class ChronoProject:
     schedulemod:int
     scheme:Dict[str, str]
     day_zero_sleep:Tuple[time,time,bool]
+    forbidden:List[str]
 
     def __init__(self, name:str, path:str):
         """Constructor of ChronoProject."""
@@ -198,6 +198,7 @@ class ChronoProject:
         self.scheme=MSSH_color_scheme
         self.load_settings()
         self.day_zero_sleep=()
+        self.forbidden=["sleep"]
 
     def set_schedule(self,schedule:ChronoSchedule)->None:
         """Sets the schedule for this project."""
@@ -244,7 +245,7 @@ class ChronoProject:
         """Generates metadata for the LaTeX file."""
         return ["\\title{" + f"{self.name}"+"}"]
 
-    def export_pdf(self, days=[""])->None:
+    def export_pdf(self, days:List[str]=[""])->None:
         """ Exports the object to a LaTeX -> PDF file."""
         if days==[""]:
             days=[day for day in self.days.keys()]
@@ -281,7 +282,7 @@ class ChronoProject:
         if os.path.isfile(f"{self.name}.toc"):os.remove(f"{self.name}.toc")
         if os.path.isfile(f"{self.name}.tex"):os.remove(f"{self.name}.tex")
         
-    def save(self, path=None)->None:
+    def save(self, path:Optional[str]=None)->None:
         """Saves the current state of the project to a json file. """
         if path == None: path=self.path
         export=dict()
@@ -332,7 +333,7 @@ class MSSH:
         return new_reference
 
     @staticmethod
-    def c_create_day(project:ChronoProject, reference:str, date:str, start="08:00", end="22:00")->str:
+    def c_create_day(project:ChronoProject, reference:str, date:str, start:str="08:00", end:str="22:00")->str:
         """Creates a ChronoDay given:"""
         if len(date.split("-"))==3:
             project.add_day(ChronoDay(input_date=date, events=[], day_start=start, day_end=end))
@@ -385,13 +386,13 @@ class MSSH:
         return reference
     
     @staticmethod
-    def c_mk(project:ChronoProject, reference:str, days="")->str:
+    def c_mk(project:ChronoProject, reference:str, days:str="")->str:
         """Exports a set of days (seperated by commata) to pdf."""
         project.export_pdf([date.today().isoformat() if day=="today" else day for day in days.split(",")])
         return reference
 
     @staticmethod
-    def c_show(project:ChronoProject, reference:str, days="")->str:
+    def c_show(project:ChronoProject, reference:str, days:str="")->str:
         """Exports the ChronoProject to pdf and opens the file."""
         project.export_pdf()
         subprocess.Popen([project.settings["pdfpath"], "/A" ,f"nameddest={date.today().isoformat()}", project.name+".pdf"], shell=True)
@@ -526,7 +527,7 @@ class MSSH:
             for e in project.days[reference].events:
                 if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
                     e.what=what
-                    return reference
+        return reference
 
     @staticmethod        
     def c_change_event_tags(project:ChronoProject, reference:str, start:str, stop:str, tags:str)->str:
@@ -535,7 +536,7 @@ class MSSH:
             for e in project.days[reference].events:
                 if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
                     e.tags=tags.split(",")
-                    return reference
+        return reference
 
     @staticmethod
     def c_change_event(project:ChronoProject, reference:str, start:str, stop:str, mode:str, *args)->str:
@@ -566,10 +567,10 @@ class MSSH:
                 ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
         for day in days:
             for tag in tags:
-                if not tag in ["sleep",""]:
+                if not tag in project.forbidden:
                     ys[tag].append(get_time(day, tag))
                 elif tag=="sleep":
-                    if not day.sleep == ():
+                    if not day.sleep==():
                         ys["sleep"].append(get_seconds(day.get_sleep())/3600)
                         print(day.date,ys["sleep"][-1])
                     else:
@@ -812,6 +813,7 @@ class MSSH:
         if reference in project.days.keys():
             print(project.days[reference].sport["runs"])
         return reference
+    
     @staticmethod
     def c_run_today(project:ChronoProject, reference:str)->str:
         if reference in project.days.keys():
@@ -823,6 +825,22 @@ class MSSH:
                 distance=sum([run.distance for run in project.days[reference].sport["runs"]])
                 pace=seconds_to_time(int(lengths/distance))
                 print(f"{reference}: You ran {distance} in {lengtht}. That makes a pace of {pace.isoformat()[3:]} per kilometer.")
+        return reference
+
+    @staticmethod
+    def c_runplot(project:ChronoProject, reference:str,tags:str,start_date:str="start",end_date:str="stop")->str:
+        tagsl=tags.split(",")
+        days = project.analysis_get_between(start_date, end_date)
+        n=len(days)
+        xs=[i for i in range(n)]
+        ys={tag:[] for tag in tagsl}
+        for day in days:
+            if "distance" in tagsl:
+                ys["distance"].append(sum([run.distance for run in day.sport["runs"]]))
+        if "distance" in tagsl:
+            print(xs,ys)
+            plt.plot(xs,ys["distance"])
+            plt.show()  
         return reference
 
 class ChronoClient:
@@ -924,7 +942,7 @@ class ChronoClient:
                 print("This command does not exist")
         logging.shutdown()
 
-    def build_ChronoProject(self, path:str=None)->ChronoProject:
+    def build_ChronoProject(self, path:Optional[str]=None)->None:
         """ Builds a ChronoProject from a given path. """
         if path == None: path=self.path
         with open("data/"+path+".json", "r+", encoding="utf-8") as f:

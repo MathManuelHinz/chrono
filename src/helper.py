@@ -1,5 +1,5 @@
 from subprocess import call
-from typing import Dict, List, Tuple, IO,Callable
+from typing import Dict, List, Tuple, IO, Callable, Any
 from functools import reduce
 from datetime import datetime, date, time
 from inspect import signature
@@ -25,7 +25,7 @@ def is_in(t1:datetime, b1:datetime, b2:datetime)->bool:
     assert b1 < b2
     return t1 >= b1 and t1 <= b2
 
-def get_intersect(l1:List, l2:List)->List:
+def get_intersect(l1:List[Any], l2:List[Any])->List[Any]:
     """Gets the intersection of two lists."""
     return list(filter(lambda x: x in l2, l1))
 
@@ -81,13 +81,13 @@ def get_nargs(f:Callable)->int:
     return len(sig.parameters)
 
 
-def cursed_get_lambda(alias:str,cmds=Dict[str, Callable])->Callable:
+def cursed_get_lambda(alias:str,cmds=Dict[str, Callable[[Any],Any]])->Callable[[Any],Any]:
     """Turns an alias (see alias documentation) into a function. Works with multiple commands. Either cursed or genius, edit: definitely cursed."""
     get_cmds=(alias.split(" |> ")) #Inspired by f#
     splitcmds=[split_command(cmd) for cmd in get_cmds]
-    return (lambda *xs: reduce(lambda acc, sc: [cmds[sc[0]](xs[0],acc[0],*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in sc[1:]]), acc[1]+get_nargs(cmds[sc[0]])-2], splitcmds, [xs[1],0])[0])
+    return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in sc[1:]]), splitcmds, xs[1]))
 
-def get_lambda(alias:str,cmds=Dict[str, Callable]):
+def get_lambda(alias:str,cmds=Dict[str, Callable[[Any],Any]])->Callable[[Any],Any]:
     """Turns an alias (see alias documentation) into a function. Deprecated?"""
     splitcmd=split_command(alias)
     return (lambda *xs: cmds[splitcmd[0]](xs[0],xs[1],*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in splitcmd[1:]]))
@@ -115,4 +115,4 @@ def seconds_to_time(seconds:int)->time:
     return time(hour=hours,minute=minutes,second=seconds) 
 
 def sleepdata_to_time(sleepdata:Tuple[time,time,bool])->time:
-    return seconds_to_time(seconds=abs(get_tf_length(sleepdata)-int(sleepdata[2])*(SECONDS_IN_A_DAY)))
+    return seconds_to_time(seconds=abs(get_tf_length(sleepdata[:2])-int(sleepdata[2])*(SECONDS_IN_A_DAY)))
