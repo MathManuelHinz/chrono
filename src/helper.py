@@ -115,4 +115,4 @@ def seconds_to_time(seconds:int)->time:
     return time(hour=hours,minute=minutes,second=seconds) 
 
 def sleepdata_to_time(sleepdata:Tuple[time,time,bool])->time:
-    return seconds_to_time(seconds=abs(get_tf_length(sleepdata[:2])-int(sleepdata[2])*(SECONDS_IN_A_DAY)))
+    return seconds_to_time(seconds=abs(get_tf_length((sleepdata[0],sleepdata[1]))-int(sleepdata[2])*(SECONDS_IN_A_DAY)))

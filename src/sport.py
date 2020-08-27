@@ -8,7 +8,7 @@ class ChronoSportEvent:
 
 class ChronoRunningEvent(ChronoSportEvent):
 
-    def __init__(self, run_time:float, distance:float, start_time:time):
+    def __init__(self, run_time:int, distance:float, start_time:time):
         self.time=run_time
         self.distance=distance
         self.start_time=start_time

@@ -130,7 +130,7 @@ class ChronoDay:
 
     def to_dict(self)->Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]:
         """Used to save the object as a json."""
-        d=dict()
+        d:Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]=dict()
         d["day_start"]=self.day_start.isoformat()
         d["day_end"]=self.day_end.isoformat()
         d["date"]=self.date.__str__()
@@ -706,27 +706,30 @@ class MSSH:
     @staticmethod
     def c_add_run(project:ChronoProject, reference:str, start_time:str, run_time:str, distance:str)->str:
         """Adds a ChronoRunEvent based on:"""
-        project.days[reference].add_run(ChronoRunningEvent(float(run_time),float(distance),time(int(start_time[0:2]), int(start_time[3:]))))
+        runtimei=int(run_time[0:2])*60+int(run_time[3:5])
+        project.days[reference].add_run(ChronoRunningEvent(runtimei,float(distance),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_add_situp(project:ChronoProject, reference:str, start_time:str, situp_time:str, mult:str)->str:
         """Adds a ChronoSitUpsEvent based on:"""
-        project.days[reference].add_situp(ChronoSitUpsEvent(float(situp_time),int(mult),time(int(start_time[0:2]), int(start_time[3:]))))
+        situp_timef=float(situp_time[0:2])*60+float(situp_time[3:5])
+        project.days[reference].add_situp(ChronoSitUpsEvent(situp_timef,int(mult),time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_add_plank(project:ChronoProject, reference:str, start_time:str, p_time:str)->str:
         """Adds a ChronoPlankEvent based on:"""
-        project.days[reference].add_plank(ChronoPlankEvent(float(p_time),time(int(start_time[0:2]), int(start_time[3:]))))
+        p_timef=float(p_time[0:2])*60+float(p_time[3:5])
+        project.days[reference].add_plank(ChronoPlankEvent(p_timef,time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
     def c_add_pushup(project:ChronoProject, reference:str, start_time:str, times:str, mults:str)->str:
         """Adds a ChronoPushUpEvent based on:"""
-        times=[float(time) for time in times.split(",")]
-        mults=[int(mult) for mult in mults.split(",")]
-        project.days[reference].add_pushup(ChronoPushUpEvent(times,mults,time(int(start_time[0:2]), int(start_time[3:]))))
+        timesfl=[float(time[0:2])*60+float(time[3:5]) for time in times.split(",")]
+        multsil=[int(mult) for mult in mults.split(",")]
+        project.days[reference].add_pushup(ChronoPushUpEvent(timesfl,multsil,time(int(start_time[0:2]), int(start_time[3:]))))
         return reference
 
     @staticmethod
@@ -837,10 +840,35 @@ class MSSH:
         for day in days:
             if "distance" in tagsl:
                 ys["distance"].append(sum([run.distance for run in day.sport["runs"]]))
+            if "pace" in tagsl:
+                ys["pace"].append(((sum([run.time for run in day.sport["runs"]/sum([run.distance for run in day.sport["runs"])
         if "distance" in tagsl:
-            print(xs,ys)
             plt.plot(xs,ys["distance"])
             plt.show()  
+        return reference
+
+    @staticmethod
+    def c_del_run(project:ChronoProject, reference:str, start_time:str)->str:
+        if reference in project.days.keys():
+            project.days[reference].sport["runs"]=list(filter(lambda run: run.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["runs"]))
+        return reference
+
+    @staticmethod
+    def c_del_situp(project:ChronoProject, reference:str, start_time:str)->str:
+        if reference in project.days.keys():
+            project.days[reference].sport["situps"]=list(filter(lambda situp: situp.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["situps"]))
+        return reference
+    
+    @staticmethod
+    def c_del_plank(project:ChronoProject, reference:str, start_time:str)->str:
+        if reference in project.days.keys():
+            project.days[reference].sport["planks"]=list(filter(lambda plank: plank.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["planks"]))
+        return reference
+
+    @staticmethod
+    def c_del_pushup(project:ChronoProject, reference:str, start_time:str)->str:
+        if reference in project.days.keys():
+            project.days[reference].sport["pushups"]=list(filter(lambda pushup: pushup.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["pushups"]))
         return reference
 
 class ChronoClient:
@@ -863,9 +891,9 @@ class ChronoClient:
         #project.set_alias() # doesn't work: needs a command set
         return reference
 
-    def c_restore(self, project:ChronoProject, reference:str, code:str=0)->str:
+    def c_restore(self, project:ChronoProject, reference:str, code:str="0")->str:
         """Restores a project from a backup."""
-        if code==project.settings["code"]:
+        if int(code)==project.settings["code"]:
             tmp=project.path
             if os.path.isfile(project.path+"_backup.json"):
                 self.build_ChronoProject(path=project.path+"_backup")
