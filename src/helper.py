@@ -1,8 +1,9 @@
 from subprocess import call
-from typing import Dict, List, Tuple, IO, Callable, Any
+from typing import Dict, Generator, List, Tuple, IO, Callable, Any
 from functools import reduce
 from datetime import datetime, date, time
 from inspect import signature
+from collections.abc import Iterable 
 
 WEEKDAYS=["Monday", "Tuesday", "Wendsday", "Thursday", "Friday","Saturday", "Sunday"]
 
@@ -19,6 +20,18 @@ MSSH_color_scheme:Dict[str, str]={
     "tine":"magenta",
     "korean":"magenta"
 }
+
+def is_iterable(obj:Any):
+    return isinstance(obj, Iterable)
+
+def get_two(list:List[Any])->Generator[Any,Any,Any]: #better type soon
+    for x in list:
+        if is_iterable(x) and not isinstance(x,str):
+            for e in x:
+                yield e
+        else:
+            yield x
+
 
 def is_in(t1:datetime, b1:datetime, b2:datetime)->bool:
     """Checks if t1 is in between b1 and b2. Asserts that b1 < b2."""
@@ -80,12 +93,15 @@ def get_nargs(f:Callable)->int:
     sig=signature(f)
     return len(sig.parameters)
 
+def get_slice_start(args:List[str])->int:
+    indis=[int(arg.replace("$","")) for arg in args if "$" in arg and "$N" not in arg]
+    return sum(indis)+2
 
 def cursed_get_lambda(alias:str,cmds=Dict[str, Callable[[Any],Any]])->Callable[[Any],Any]:
     """Turns an alias (see alias documentation) into a function. Works with multiple commands. Either cursed or genius, edit: definitely cursed."""
     get_cmds=(alias.split(" |> ")) #Inspired by f#
     splitcmds=[split_command(cmd) for cmd in get_cmds]
-    return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in sc[1:]]), splitcmds, xs[1]))
+    return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*get_two([arg if (not "$" in arg) else (xs[int(arg.replace("$",""))+1] if (not "$N" in arg) else xs[slice(get_slice_start(sc[1:]),None)]) for arg in sc[1:]])), splitcmds, xs[1]))
 
 def get_lambda(alias:str,cmds=Dict[str, Callable[[Any],Any]])->Callable[[Any],Any]:
     """Turns an alias (see alias documentation) into a function. Deprecated?"""

@@ -53,7 +53,7 @@ class ChronoDay:
             self.day_start=time_from_str(day_start)
         if day_end == None:
             try: self.day_end=maxmin[1]
-            except: logging.warning("ChronoDay needs to have at least one of the following: none empty events list, day_end")
+            except: logging.warning("ChronoDay needs to have at least one of the following: none empty events list, day_end.")
         else:
             self.day_end=time_from_str(day_end)
         self.date=date_from_str(input_date)
@@ -79,7 +79,7 @@ class ChronoDay:
 
     def add_event(self, event:ChronoEvent, force:bool=False)->None:
         """
-        This function tries a event to the events list. 
+        This function tries to add an event to the events list. 
         This fails if there is an overlap with an already existing event. Adding the event can be forced by 
         setting force to True. In this case overlapping existing events will be deleted. 
         Adding an event may change the day_start, day_end attributes.
@@ -101,7 +101,7 @@ class ChronoDay:
         if event.end >= ce:
             self.day_end=event.end
 
-    def fill_empty(self, what:str="Relax")->None: #not implemented yet
+    def fill_empty(self, what:str="relax")->None: #not implemented yet
         raise NotImplementedError
         pass
 
@@ -109,7 +109,7 @@ class ChronoDay:
         """Returns the events sorted by starting time."""
         return sorted(self.events, key=lambda x:x.start)
 
-    def get_bounds(self)->Tuple[str, str]:
+    def get_bounds(self)->Tuple[time, time]:
         """Returns the earliest starting time and the latest ending time."""
         assert not self.events==[]
         starts=[event.start for event in self.events]
@@ -392,7 +392,7 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_show(project:ChronoProject, reference:str, days:str="")->str:
+    def c_show(project:ChronoProject, reference:str)->str:
         """Exports the ChronoProject to pdf and opens the file."""
         project.export_pdf()
         subprocess.Popen([project.settings["pdfpath"], "/A" ,f"nameddest={date.today().isoformat()}", project.name+".pdf"], shell=True)
@@ -553,6 +553,7 @@ class MSSH:
     @staticmethod
     def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe,programming", start_date:str="start", end_date:str="stop")->str:
         """Plots the hours of var:tags and their sum."""
+        print(tags,start_date,end_date)
         tags=tags.split(",")
         assert not "sum" in tags
         days = project.analysis_get_between(start_date, end_date)
@@ -595,7 +596,10 @@ class MSSH:
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(xs,[WDA[day.date.weekday()] for day in days],"--",label="wda")
         if (tmp := date.today()).isoformat() in project.days.keys():
-            plt.scatter([d:=(tmp-days[0].date).days], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
+            try: plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
+            except:
+                logging.warn("Some days are missing.")
+                print("Some days are missing.")
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xlabel("Days")
         plt.ylabel("Hours")
@@ -603,7 +607,7 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_plot_week(project:ChronoProject, reference:str, tags:str="mathe,programming,korean",start_date:str="start", end_date:str="stop",k:str="7")->str:
+    def c_plot_week(project:ChronoProject, reference:str, tags:str="mathe,programming,korean",k:str="7",start_date:str="start", end_date:str="stop")->str:
         """Plots the hours of var:tags and their sum."""
         k=int(k)
         tags=tags.split(",")
@@ -655,7 +659,10 @@ class MSSH:
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(week_splice(xs),week_splice([WDA[day.date.weekday()] for day in days]),"--",label="wda")
         if tmp.isoformat() in project.days.keys():
-            plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
+            try: plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
+            except:
+                logging.warn("Some days are missing.")
+                print("Some days are missing.")
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xticks(week_splice(xs), week_splice([WEEKDAYS[day.date.weekday()][0:3]+"." for day in days]))
         plt.xlabel("Days")
@@ -840,8 +847,6 @@ class MSSH:
         for day in days:
             if "distance" in tagsl:
                 ys["distance"].append(sum([run.distance for run in day.sport["runs"]]))
-            if "pace" in tagsl:
-                ys["pace"].append(((sum([run.time for run in day.sport["runs"]/sum([run.distance for run in day.sport["runs"])
         if "distance" in tagsl:
             plt.plot(xs,ys["distance"])
             plt.show()  
@@ -869,6 +874,18 @@ class MSSH:
     def c_del_pushup(project:ChronoProject, reference:str, start_time:str)->str:
         if reference in project.days.keys():
             project.days[reference].sport["pushups"]=list(filter(lambda pushup: pushup.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["pushups"]))
+        return reference
+
+    @staticmethod
+    def c_fill_empty_days(project:ChronoProject, reference:str,start_date:str="start",end_date:str="stop")->str:
+        days = project.analysis_get_between(start_date, end_date)
+        current_day=days[0].date
+        last_day=days[-1]
+        td=timedelta(days=1)
+        while current_day < last_day.date:
+            if not (c_date:=current_day.isoformat()) in project.days.keys():
+                project.add_day(ChronoDay(events=[], input_date=c_date))
+            current_day += td
         return reference
 
 class ChronoClient:
@@ -926,6 +943,26 @@ class ChronoClient:
         project.save()
         return reference
 
+    def c_lhof(self, project:ChronoProject, reference:str,args:str,f:str,*fargs:str)->str:
+        if f in self.command_set.keys():
+            argsl=args.split(",")
+            aargs=argsl+list(fargs)
+            return self.command_set[f](project,reference,*aargs)
+        else:
+            logging.warn(f"Can't find f: {f}")
+            print(f"Can't find f: {f}") 
+            return reference
+
+    def c_rhof(self, project:ChronoProject, reference:str,args:str,f:str,*fargs:str)->str:
+        if f in self.command_set.keys():
+            argsl=args.split(",")
+            aargs=list(fargs)+argsl
+            return self.command_set[f](project,reference,*aargs)
+        else:
+            logging.warn(f"Can't find f: {f}")
+            print(f"Can't find f: {f}") 
+            return reference
+
     def add_commands(self)->None:
         """ Adds commands to the command set of this object."""
         self.command_set["quit"]=self.c_quit
@@ -934,8 +971,10 @@ class ChronoClient:
         self.command_set["refresh"]=self.c_refresh
         self.command_set["help"]=self.c_help
         self.command_set["save"]=self.c_save
+        self.command_set["lhof"]=self.c_lhof
+        self.command_set["rhof"]=self.c_rhof
 
-    def __init__(self, path:str, command_set:Dict[str, Callable[[List[str]], None]]={}):
+    def __init__(self, path:str, command_set:Dict[str, Callable[[Union[List[str],ChronoProject],str], None]]={}):
         self.path=path
         self.project=None
         self.command_set=command_set

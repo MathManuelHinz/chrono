@@ -24,7 +24,7 @@ class ChronoTime:
 
     def to_dict(self)->Dict[str, Union[str, List[str]]]:
         """Used to save the object as a json."""
-        d=dict()
+        d:Dict[str, Union[str, List[str]]]=dict()
         d["tdate"]=self.tdate.isoformat() #YYYY-MM-DD
         d["start"]=self.start.isoformat() #HH:MM:SS
         d["what"]=self.what
