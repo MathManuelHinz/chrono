@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 from src.helper import (get_color, get_intersect, list_to_string, seconds_to_time, split_command,
                     write_table,get_seconds, time_from_str, date_from_str, get_tf_length, 
-                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time,cursed_get_lambda)
+                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time, cursed_get_lambda, what_or_none)
 
 from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
                    ChronoPushUpEvent, ChronoSportEvent)
@@ -553,7 +553,6 @@ class MSSH:
     @staticmethod
     def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe,programming", start_date:str="start", end_date:str="stop")->str:
         """Plots the hours of var:tags and their sum."""
-        print(tags,start_date,end_date)
         tags=tags.split(",")
         assert not "sum" in tags
         days = project.analysis_get_between(start_date, end_date)
@@ -573,7 +572,6 @@ class MSSH:
                 elif tag=="sleep":
                     if not day.sleep==():
                         ys["sleep"].append(get_seconds(day.get_sleep())/3600)
-                        print(day.date,ys["sleep"][-1])
                     else:
                         ys["sleep"].append(0)
         if "sleep" in tags: 
@@ -748,6 +746,8 @@ class MSSH:
 
     @staticmethod
     def c_heatmap(project:ChronoProject, reference:str, tag:str, yt:str, start_date:str="start", end_date:str="stop")->str:
+        """Draws a heat map for a specific var:tag with var:yt vertical labels with data from 
+        [var:start_date,var:end_date]."""
         yt=int(yt)
         c=24*60*60
         days=project.analysis_get_between(start_date,end_date) 
@@ -768,6 +768,8 @@ class MSSH:
 
     @staticmethod
     def c_split_project(project:ChronoProject, reference:str, split:str, old_name:str)->str:
+        """Splits the project into two. Saves [start_date,split] to var:oldname.json and (split, end_date]
+         to project.json."""
         tmp=project.days
         splitdate=date_from_str(split)
         project.days = {key:tmp[key] for key in tmp.keys() if tmp[key].date <=splitdate}
@@ -778,6 +780,7 @@ class MSSH:
 
     @staticmethod
     def c_oura_sleep(project:ChronoProject, reference:str, start:str, stop:str)->str:
+        """Gets your sleep data \in [start-1,stop] from oura is such a connection exists."""
         getzeroday=start=="start"
         ds=[day.date for day in project.days.values()]
         if start=="start": start=(min(ds)+timedelta(days=-1)).isoformat()
@@ -790,11 +793,11 @@ class MSSH:
                     if key in keys:
                         ss=time_from_str(sleepdata[1][key][0])
                         se=time_from_str(sleepdata[1][key][1])
-                        project.days[key].sleep=[ss,se,sleepdata[1][key][2]]
+                        project.days[key].sleep=(ss,se,sleepdata[1][key][2])
             if getzeroday:
                 ss=time_from_str(sleepdata[1][start][0])
                 se=time_from_str(sleepdata[1][start][1])
-                project.day_zero_sleep=[ss,se,sleepdata[1][start][2]]
+                project.day_zero_sleep=(ss,se,sleepdata[1][start][2])
         else:
             print("No oura is linked: Check your settings")
             logging.warn("No oura is linked: Check your settings")   
@@ -802,30 +805,35 @@ class MSSH:
 
     @staticmethod
     def c_get_sleep(project:ChronoProject, reference:str, sdate:str)->str:
+        """Prints the sleep data from a specific var:sdate."""
         if sdate in project.days.keys():
             print(f"Sleep: {list(map(lambda x: x.isoformat(), project.days[sdate].sleep[0:2]))}: {project.days[sdate].sleep[2]} => {project.days[sdate].get_sleep().isoformat()}")
         return reference
 
     @staticmethod
     def c_set_sleep(project:ChronoProject, reference:str, sdate:str, start:str, stop:str,sameday:str="1")->str:
+        """Sets the sleep for var:sdate to (var:start, var:stop, var:sameday)."""
         if sdate in project.days.keys():
-            project.days[sdate].sleep=[time_from_str(start),time_from_str(stop),sameday]
+            project.days[sdate].sleep=(time_from_str(start),time_from_str(stop),sameday)
         return reference
     
     @staticmethod
     def c_last_night_sleep(project:ChronoProject, reference:str)->str:
+        """Gets the sleep of the day before the reference"""
         yesterday=(date_from_str(reference)+timedelta(days=-1)).isoformat()
         MSSH.c_get_sleep(project, reference, yesterday)
         return reference
 
     @staticmethod
     def c_show_run(project:ChronoProject, reference:str)->str:
+        """Displays all runs which happend on the referenced day."""
         if reference in project.days.keys():
             print(project.days[reference].sport["runs"])
         return reference
     
     @staticmethod
     def c_run_today(project:ChronoProject, reference:str)->str:
+        """Displays a short analysis of all runs which happend on the referenced day."""
         if reference in project.days.keys():
             if project.days[reference].sport["runs"] == []:
                 print("no runs today :(")
@@ -838,46 +846,50 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_runplot(project:ChronoProject, reference:str,tags:str,start_date:str="start",end_date:str="stop")->str:
-        tagsl=tags.split(",")
+    def c_runplot(project:ChronoProject, reference:str,start_date:str="start",end_date:str="stop")->str:
+        """Plots the distance run each day in between [start_date, end_date]."""
         days = project.analysis_get_between(start_date, end_date)
         n=len(days)
         xs=[i for i in range(n)]
-        ys={tag:[] for tag in tagsl}
+        ys=[]
         for day in days:
-            if "distance" in tagsl:
-                ys["distance"].append(sum([run.distance for run in day.sport["runs"]]))
-        if "distance" in tagsl:
-            plt.plot(xs,ys["distance"])
-            plt.show()  
+            ys.append(sum([run.distance for run in day.sport["runs"]]))
+        plt.plot(xs,ys)
+        plt.show()  
         return reference
 
     @staticmethod
     def c_del_run(project:ChronoProject, reference:str, start_time:str)->str:
+        """Deletes a given run on the referenced day."""
         if reference in project.days.keys():
             project.days[reference].sport["runs"]=list(filter(lambda run: run.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["runs"]))
         return reference
 
     @staticmethod
     def c_del_situp(project:ChronoProject, reference:str, start_time:str)->str:
+        """Deletes a given situp on the referenced day."""
         if reference in project.days.keys():
             project.days[reference].sport["situps"]=list(filter(lambda situp: situp.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["situps"]))
         return reference
     
     @staticmethod
     def c_del_plank(project:ChronoProject, reference:str, start_time:str)->str:
+        """Deletes a given plank on the referenced day."""
         if reference in project.days.keys():
             project.days[reference].sport["planks"]=list(filter(lambda plank: plank.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["planks"]))
         return reference
 
     @staticmethod
     def c_del_pushup(project:ChronoProject, reference:str, start_time:str)->str:
+        """Deletes a given pushup on the referenced day."""
         if reference in project.days.keys():
             project.days[reference].sport["pushups"]=list(filter(lambda pushup: pushup.start_time.isoformat()[:5]!=start_time, project.days[reference].sport["pushups"]))
         return reference
 
     @staticmethod
     def c_fill_empty_days(project:ChronoProject, reference:str,start_date:str="start",end_date:str="stop")->str:
+        """Fills up any missing days between var:start_date and var:end_date,  
+        but does not populate them based on the schedule!"""
         days = project.analysis_get_between(start_date, end_date)
         current_day=days[0].date
         last_day=days[-1]
@@ -886,6 +898,48 @@ class MSSH:
             if not (c_date:=current_day.isoformat()) in project.days.keys():
                 project.add_day(ChronoDay(events=[], input_date=c_date))
             current_day += td
+        return reference
+
+    @staticmethod
+    def c_export_sport(project:ChronoProject, reference:str,start_date:str="start",end_date:str="stop")->str:
+        """Exports your sports data  in between [start_date, end_date] to data/sport.json."""
+        sport=dict()
+        days = project.analysis_get_between(start_date, end_date)
+        for day in days:
+            if not list(day.sport.values()) == [[],[],[],[]]:
+                sport[day.date.isoformat()] = {key:[entry.to_dict() for entry in day.sport[key]] for key in day.sport.keys()}
+        with open("data/sport.json","w+") as f:
+            json.dump(sport,f)
+        return reference
+
+    @staticmethod
+    def c_exportweek(project:ChronoProject, reference:str,end_date:str="stop")->str:
+        """ Exports 7 days ending on var:end_date to a LaTeX -> PDF file and opens the file."""
+        days=project.analysis_get_between("start", end_date)[-7:]
+        header=["\\documentclass{article}", "\\usepackage{xcolor}","\\usepackage{hyperref}"]
+        poi=set()
+        for day in days:
+            for event in day.events:
+                poi.add(event.start)
+                poi.add(event.end)
+        pois=sorted(poi)
+        slots=[(pois[i],pois[i+1]) for i in range(len(pois)-1)]
+        with open("weekexport.tex", "w+", encoding="utf-8") as f:
+            f.write(list_to_string(header)+"\n"+list_to_string(project.get_meta())+"\n")
+            f.write("\\begin{document}\n")
+            f.write("\\maketitle\n")
+            data=[["Timeslots"]+[WEEKDAYS[day.date.weekday()] for day in days]]+[[f"{slot[0].isoformat()}-{slot[1].isoformat()}"]+[what_or_none(list(filter(lambda x: check_in_timeframe(slot,x),days[i].events)), project.scheme) for i in range(7)] for slot in slots]
+            write_table(f, [8, len(slots)+1], data=data)
+            f.write("\\end{document}\n")
+        subprocess.run(["pdflatex", "weekexport.tex"], stdout=subprocess.DEVNULL)
+        subprocess.run(["pdflatex", "weekexport.tex"], stdout=subprocess.DEVNULL)
+        if os.path.isfile("weekexport.log"):os.remove("weekexport.log")
+        if os.path.isfile("weekexport.aux"):os.remove("weekexport.aux")
+        if os.path.isfile("weekexport.nav"):os.remove("weekexport.nav")
+        if os.path.isfile("weekexport.out"):os.remove("weekexport.out")
+        if os.path.isfile("weekexport.toc"):os.remove("weekexport.toc")
+        if os.path.isfile("weekexport.tex"):os.remove("weekexport.tex")
+        subprocess.Popen([project.settings["pdfpath"],"weekexport.pdf"], shell=True)
         return reference
 
 class ChronoClient:

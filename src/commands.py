@@ -47,5 +47,7 @@ MSSH_COMMS={
     "delpushup": MSSH.c_del_pushup,
     "delplank": MSSH.c_del_plank,
     "filledays": MSSH.c_fill_empty_days,
+    "exports": MSSH.c_export_sport,
+    "exportweek": MSSH.c_exportweek,
     "debug": lambda _,b,*x: print(b,x)
 }

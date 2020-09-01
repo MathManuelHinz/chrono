@@ -3,7 +3,7 @@ from typing import Dict, Generator, List, Tuple, IO, Callable, Any
 from functools import reduce
 from datetime import datetime, date, time
 from inspect import signature
-from collections.abc import Iterable 
+from collections.abc import Iterable
 
 WEEKDAYS=["Monday", "Tuesday", "Wendsday", "Thursday", "Friday","Saturday", "Sunday"]
 
@@ -21,10 +21,12 @@ MSSH_color_scheme:Dict[str, str]={
     "korean":"magenta"
 }
 
-def is_iterable(obj:Any):
+def is_iterable(obj:Any)->bool:
+    """Checks if a given object is an iterable."""
     return isinstance(obj, Iterable)
 
-def get_two(list:List[Any])->Generator[Any,Any,Any]: #better type soon
+def get_two(list:List[Any])->Generator[Any,None,None]: #better type soon
+    """cursed"""
     for x in list:
         if is_iterable(x) and not isinstance(x,str):
             for e in x:
@@ -89,11 +91,13 @@ def get_seconds(t:time)->int:
     """Returns the seconds in a time object."""
     return t.second + t.minute*60 + t.hour*60*60
 
-def get_nargs(f:Callable)->int:
+def get_nargs(f:Callable[[Any],Any])->int:
+    """Gets the number of arguments a given function takes."""
     sig=signature(f)
     return len(sig.parameters)
 
 def get_slice_start(args:List[str])->int:
+    """Helper function specifically to be used by cursed_get_lambda."""
     indis=[int(arg.replace("$","")) for arg in args if "$" in arg and "$N" not in arg]
     return sum(indis)+2
 
@@ -101,12 +105,8 @@ def cursed_get_lambda(alias:str,cmds=Dict[str, Callable[[Any],Any]])->Callable[[
     """Turns an alias (see alias documentation) into a function. Works with multiple commands. Either cursed or genius, edit: definitely cursed."""
     get_cmds=(alias.split(" |> ")) #Inspired by f#
     splitcmds=[split_command(cmd) for cmd in get_cmds]
-    return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*get_two([arg if (not "$" in arg) else (xs[int(arg.replace("$",""))+1] if (not "$N" in arg) else xs[slice(get_slice_start(sc[1:]),None)]) for arg in sc[1:]])), splitcmds, xs[1]))
-
-def get_lambda(alias:str,cmds=Dict[str, Callable[[Any],Any]])->Callable[[Any],Any]:
-    """Turns an alias (see alias documentation) into a function. Deprecated?"""
-    splitcmd=split_command(alias)
-    return (lambda *xs: cmds[splitcmd[0]](xs[0],xs[1],*[arg if (not "$" in arg) else xs[int(arg.replace("$",""))+1] for arg in splitcmd[1:]]))
+    return (lambda *xs: reduce(lambda acc, sc: cmds[sc[0]](xs[0],acc,*get_two([arg if (not "$" in arg)\
+         else (xs[int(arg.replace("$",""))+1] if (not "$N" in arg) else xs[slice(get_slice_start(sc[1:]),None)]) for arg in sc[1:]])), splitcmds, xs[1]))
 
 def time_from_str(str_time:str)->time:
     """Returns the time object associated with the given string."""
@@ -131,4 +131,14 @@ def seconds_to_time(seconds:int)->time:
     return time(hour=hours,minute=minutes,second=seconds) 
 
 def sleepdata_to_time(sleepdata:Tuple[time,time,bool])->time:
+    """Converts sleepdata to a time object describing the length the sleep.""" 
     return seconds_to_time(seconds=abs(get_tf_length((sleepdata[0],sleepdata[1]))-int(sleepdata[2])*(SECONDS_IN_A_DAY)))
+
+def what_or_none(l:List[Any],scheme:Dict[str,str])->str:
+    """Returns the first element of a List of ChronoEvents by representing it as a colored string. 
+    If the given list has no first element the string \"Nothing\" is returned."""
+
+    if len(l)>0:
+        return "\\textcolor{"+get_color(scheme, l[0].tags)+"}{"+f"{l[0].what}"+"}"  
+    else:
+        return "Nothing"
