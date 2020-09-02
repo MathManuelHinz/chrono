@@ -35,7 +35,8 @@ Remember to change the value of "pdfpath" to the path of your Adobe Acrobat read
     "todo": [], 
     "name": "MSSH-project",
     "path": "project",
-    "days": {}
+    "days": {},
+    "sevents": []
 }
 ```
 

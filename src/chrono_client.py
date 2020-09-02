@@ -34,7 +34,7 @@ class ChronoDay:
     sleep:Tuple[time]
 
 
-    def __init__(self, events:List[ChronoEvent], input_date:str,day_start:str=None, day_end:str=None):
+    def __init__(self, events:List[ChronoEvent], input_date:str,day_start:Optional[str]=None, day_end:Optional[str]=None):
         """Constructor: ChronoDay. day_start and day_end input will be converted to a time object, 
         input_date will be converted to a date object and
         events will be saved as is. 
@@ -1017,6 +1017,17 @@ class ChronoClient:
             print(f"Can't find f: {f}") 
             return reference
 
+    def c_ihof(self, project:ChronoProject, reference:str,args:str,i:str,f:str,*fargs:str)->str:
+        if f in self.command_set.keys():
+            argsl=args.split(",")
+            aargs=list(fargs)
+            aargs=aargs[0:int(i)]+argsl+aargs[int(i):]
+            return self.command_set[f](project,reference,*aargs)
+        else:
+            logging.warn(f"Can't find f: {f}")
+            print(f"Can't find f: {f}") 
+            return reference
+
     def add_commands(self)->None:
         """ Adds commands to the command set of this object."""
         self.command_set["quit"]=self.c_quit
@@ -1027,12 +1038,13 @@ class ChronoClient:
         self.command_set["save"]=self.c_save
         self.command_set["lhof"]=self.c_lhof
         self.command_set["rhof"]=self.c_rhof
+        self.command_set["ihof"]=self.c_ihof
 
     def __init__(self, path:str, command_set:Dict[str, Callable[[Union[List[str],ChronoProject],str], None]]={}):
         self.path=path
         self.project=None
         self.command_set=command_set
-        logging.basicConfig(filename="log.txt", level=logging.INFO)
+        logging.basicConfig(filename="data/log.txt", level=logging.INFO)
 
     def run(self)->None:
         """ Main loop of Chrono."""
