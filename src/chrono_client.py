@@ -586,7 +586,7 @@ class MSSH:
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(xs,[WDA[day.date.weekday()] for day in days],"--",label="wda")
         if reference in project.days.keys():
-            d=0
+            d=-1
             tmp=date_from_str(reference)
             for i in range(len(days)):
                 if days[i].date==tmp:
