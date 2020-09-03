@@ -591,7 +591,7 @@ class MSSH:
             for i in range(len(days)):
                 if days[i].date==tmp:
                     d=i
-            try: plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
+            try: plt.scatter([xs[d]], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
             except:
                 logging.warn("Some days are missing.")
                 print("Some days are missing.")
