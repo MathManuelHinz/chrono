@@ -14,7 +14,6 @@ MSSH_COMMS={
     "clearf":MSSH.c_clear_future,
     "getCurrent":MSSH.c_get_current,
     "today":MSSH.c_today,
-    "day":MSSH.c_day,
     "changeEtime":MSSH.c_change_event_time,
     "changeEwhat":MSSH.c_change_event_what,
     "changeEtags":MSSH.c_change_event_tags,

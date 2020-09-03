@@ -268,10 +268,11 @@ class ChronoProject:
                     write_table(f, [2, len(day.silent_events)], data=[[time.start.isoformat(), time.what] for time in day.silent_events])
                     f.write("\\clearpage")
             f.write("\\section*{"+"ToDo:"+"}\n")
-            f.write("\\begin{enumerate}\n")
-            for note in self.todo:
-                f.write("\\item " + note.text + "\n")
-            f.write("\\end{enumerate}\n")
+            if not self.todo==[]:
+                f.write("\\begin{enumerate}\n")
+                for note in self.todo:
+                    f.write("\\item " + note.text + "\n")
+                f.write("\\end{enumerate}\n")
             f.write("\\end{document}\n")
         subprocess.run(["pdflatex", self.name+".tex"], stdout=subprocess.DEVNULL)
         subprocess.run(["pdflatex", self.name+".tex"], stdout=subprocess.DEVNULL)
@@ -342,7 +343,7 @@ class MSSH:
         else:
             print("failed")
             logging.info(f"failed: createDay({reference},{date},{start},{end})")
-        return "base"
+        return reference
 
     @staticmethod
     def c_create_event(project:ChronoProject, reference:str, what:str, tags:str="relax", start:str="08:00", end:str="10:00", force:str="1")->str:
@@ -460,15 +461,6 @@ class MSSH:
             print(project.days[reference])
         else:
             print("no plan for today")
-        return reference
-
-    @staticmethod
-    def c_day(project:ChronoProject, reference:str)->str:
-        """Prints the plan for the current reference."""
-        if reference in project.days.keys():
-            print(project.days[reference])
-        else:
-            print(f"no plan for {reference}")
         return reference
 
     @staticmethod
@@ -593,7 +585,12 @@ class MSSH:
             zeroday=days[0].date.weekday()
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(xs,[WDA[day.date.weekday()] for day in days],"--",label="wda")
-        if (tmp := date.today()).isoformat() in project.days.keys():
+        if reference in project.days.keys():
+            d=0
+            tmp=date_from_str(reference)
+            for i in range(len(days)):
+                if days[i].date==tmp:
+                    d=i
             try: plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
             except:
                 logging.warn("Some days are missing.")
@@ -644,7 +641,7 @@ class MSSH:
         ax=plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-        tmp = min(date.today(),end_date)
+        tmp = min(date_from_str(reference),end_date)
         d=(tmp-start_date).days
         week_splice=lambda x : x[d-k:d+1]
         for tag in ys.keys():
@@ -944,6 +941,8 @@ class MSSH:
 
 class ChronoClient:
 
+    project:Optional[ChronoProject]
+
     def c_quit(self, project:ChronoProject, reference:str)->str:
         """Quits Chrono."""
         print("quitting")
@@ -959,14 +958,14 @@ class ChronoClient:
         project.save()
         self.build_ChronoProject()
         project.load_settings()
-        #project.set_alias() # doesn't work: needs a command set
+        project.set_alias(self.command_set)
         return reference
 
     def c_restore(self, project:ChronoProject, reference:str, code:str="0")->str:
         """Restores a project from a backup."""
         if int(code)==project.settings["code"]:
             tmp=project.path
-            if os.path.isfile(project.path+"_backup.json"):
+            if os.path.isfile("data/"+project.path+"_backup.json"):
                 self.build_ChronoProject(path=project.path+"_backup")
                 self.project.path=tmp
             else:
@@ -1051,28 +1050,34 @@ class ChronoClient:
         logging.info(f"run at : {datetime.today()}")
         if self.project== None:
             raise Exception("Missing project")
-        commands=[""]
-        reference="base"
+        last_command=""
+        reference:str="base"
         print("Chrono active")
-        while not commands[-1] == "quit":
+        if len(self.project.days.values())==0:
+            print("No ChronoDays detected. If you are new consider using the \"help\"/\"commands\" commands to get more inforamtion")
+            print("For a more detailed documentation visit: https://github.com/MathManuelHinz/chrono/tree/master/documentation")
+        while not last_command == "quit":
             print(reference, end=":")
             ip=split_command(input())
-            commands.append(ip[0])
-            if commands[-1] in self.project.alias.keys():
-                logging.info(msg=f"{ip}")
-                try :reference= self.project.alias[commands[-1]](self.project, reference,*ip[1:])
-                except Exception as e:
-                    logging.warning(e)
-                    print(e)
-            elif commands[-1] in self.command_set.keys():
-                logging.info(msg=f"{ip}")
-                try :reference= self.command_set[commands[-1]](self.project, reference, *ip[1:])
-                except Exception as e:
-                    logging.warning(e)
-                    print(e)
+            if ip==[]:
+                print("Please enter a command")
             else:
-                logging.info(msg=f"failed command: {ip}")
-                print("This command does not exist")
+                last_command=ip[0]
+                if last_command in self.project.alias.keys():
+                    logging.info(msg=f"{ip}")
+                    try: reference = self.project.alias[last_command](self.project, reference, *ip[1:])
+                    except Exception as e:
+                        logging.warning(e)
+                        print(e)
+                elif last_command in self.command_set.keys():
+                    logging.info(msg=f"{ip}")
+                    try :reference= self.command_set[last_command](self.project, reference, *ip[1:])
+                    except Exception as e:
+                        logging.warning(e)
+                        print(e)
+                else:
+                    logging.info(msg=f"failed command: {ip}")
+                    print("This command does not exist")
         logging.shutdown()
 
     def build_ChronoProject(self, path:Optional[str]=None)->None:

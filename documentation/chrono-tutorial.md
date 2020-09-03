@@ -1,10 +1,24 @@
 # Chrono guide
 
-Welcome to the Chrono guide! You will learn how to setup your very own Chrono and how to use it in no time! While for some it may seem scary at first, I hope most will feel right at home quite quickly.
+Welcome to the Chrono guide! You will learn how to setup Chrono and how to use it in no time! While Chrono may seem scary at first, I hope most will feel right at home quite quickly.
 
 ## Setting up chrono
 
-Besides the actual chrono program, you will need **2** or **3** files. All of them should be saved in the "data" folder.
+### Dependencies
+
+If you open chrono using the source files you will need to match the following requirements:
+
+- python 3.8 (or higher)
+- matploblib 
+
+The following dependencies are optional, but recommended:
+
+- $\LaTeX$
+- Adobe acrobat reader
+
+An oura account / ring is optional, but supported.
+
+Besides the actual chrono program, you will need **2** or **3** files. All of them should already be inside the "data" folder.
 
 ### settings.json
 
@@ -193,10 +207,10 @@ delEvent 15:00 16:00
 
 changeEtime takes **2** arguments:
 
-1. "start" : The time at which your Event starts, should be of the format "HH:MM".
-2. "stop" : The time at which your Event ends, should be of the format "HH:MM".
-3. "nstart" : The time at which your Event should start, should be of the format "HH:MM".
-4. "nstop" : The time at which your Event should end, should be of the format "HH:MM".
+1. "start" : The time at which your event starts, should be of the format "HH:MM".
+2. "stop" : The time at which your event ends, should be of the format "HH:MM".
+3. "nstart" : The time at which your event should start, should be of the format "HH:MM".
+4. "nstop" : The time at which your event should end, should be of the format "HH:MM".
 
 If the day identified by the current reference contains an event with exactly those start- / stop- times it will change those to nstart and nstop.
 
@@ -295,7 +309,7 @@ times 7
 
 ### plot
 
-plot takes **1-3** argument and plots the hours of each individual tag, the sum of all the selected tags as well as the week day average of the sum over the specified time frame.
+plot takes **1-3** arguments and plots the hours of each individual tag, the sum of all the selected tags as well as the week day average of the sum over the specified time frame.
 
 1. tags : tags which should be plotted.
 2. start_date : Valued "start" if no different value is given. If you supply a value it should be either start or an ISO representation of the start date (e.g. 2020-05-22). 
@@ -313,7 +327,7 @@ plot uni,blog start 2020-08-01
 
 ### plotw
 
-plotw takes **2-4** argument and plots the hours of each individual tag, the sum of all the selected tags as well as the week day average of the sum over the specified time frame.
+plotw takes **2-4** arguments and plots the hours of each individual tag, the sum of all the selected tags as well as the week day average of the sum over the specified time frame.
 
 1. tags : tags which should be plotted.
 2. k : number of days to be plotted. If no k is given k=7 will be inferred.
