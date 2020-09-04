@@ -504,11 +504,13 @@ class MSSH:
     def c_change_event_time(project:ChronoProject, reference:str, start:str, stop:str, nstart:str="08:00", nend:str="10:00")->str:
         """Changes the timeframe of a ChronoEvent."""
         if reference in project.days.keys():
-            for e in project.days[reference].events:
-                if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
-                    e.start=time_from_str(nstart)
-                    e.end=time_from_str(nend)
-                    return reference
+            if not reduce(lambda a,b: a or b, [(not ( e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop)) and check_in_timeframe((time_from_str(nstart),time_from_str(nend)),e) for e in project.days[reference].events], False):
+                for e in project.days[reference].events:
+                    if e.start.isoformat()[:-3]==start and e.end.isoformat()[:-3]==stop:
+                        e.start=time_from_str(nstart)
+                        e.end=time_from_str(nend)
+                        return reference
+        return reference
 
     @staticmethod        
     def c_change_event_what(project:ChronoProject, reference:str, start:str, stop:str, what:str)->str:
