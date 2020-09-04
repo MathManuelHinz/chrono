@@ -164,11 +164,11 @@ class ChronoSchedule:
     
     days:List[List[List[ChronoEvent]]]
 
-    def __init__(self, path):
+    def __init__(self, path:str):
         """Constructor of ChronoSchedule."""
         with open("data/"+path, "r+", encoding="utf-8") as f:
             data=json.load(f)
-        self.days=[[[] for _ in range(7)]for i in range(len(data))]
+        self.days=[[[] for _ in range(7)] for i in range(len(data))]
         for i,week in enumerate(data):
             for j  in range(7):
                 self.days[i][j]=[ChronoEvent(e["start"], e["end"], e["what"], e["tags"]) for e in week[j]]
@@ -585,13 +585,14 @@ class MSSH:
             zeroday=days[0].date.weekday()
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(xs,[WDA[day.date.weekday()] for day in days],"--",label="wda")
-        if reference in project.days.keys():
+        if reference in [day.date for day in days]:
             d=-1
             tmp=date_from_str(reference)
             for i in range(len(days)):
                 if days[i].date==tmp:
                     d=i
-            try: plt.scatter([xs[d]], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
+            print(d)
+            try: plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
             except:
                 logging.warn("Some days are missing.")
                 print("Some days are missing.")
@@ -893,7 +894,7 @@ class MSSH:
         td=timedelta(days=1)
         while current_day < last_day.date:
             if not (c_date:=current_day.isoformat()) in project.days.keys():
-                project.add_day(ChronoDay(events=[], input_date=c_date))
+                project.days[c_date]=ChronoDay(events=[], input_date=c_date)
             current_day += td
         return reference
 
@@ -941,7 +942,9 @@ class MSSH:
 
 class ChronoClient:
 
+    path:str
     project:Optional[ChronoProject]
+    command_set:Dict[str, Callable[[Union[List[str],ChronoProject],str], None]]
 
     def c_quit(self, project:ChronoProject, reference:str)->str:
         """Quits Chrono."""
@@ -1044,6 +1047,7 @@ class ChronoClient:
         self.project=None
         self.command_set=command_set
         logging.basicConfig(filename="data/log.txt", level=logging.INFO)
+        self.build_ChronoProject()
 
     def run(self)->None:
         """ Main loop of Chrono."""
@@ -1054,7 +1058,7 @@ class ChronoClient:
         reference:str="base"
         print("Chrono active")
         if len(self.project.days.values())==0:
-            print("No ChronoDays detected. If you are new consider using the \"help\"/\"commands\" commands to get more inforamtion")
+            print("No ChronoDays detected. If you are new consider using the \"help\"/\"commands\" commands to get more information.")
             print("For a more detailed documentation visit: https://github.com/MathManuelHinz/chrono/tree/master/documentation")
         while not last_command == "quit":
             print(reference, end=":")

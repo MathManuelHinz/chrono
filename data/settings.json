@@ -2,10 +2,9 @@
     "color_scheme":{
         "default":"black"
     },
-    "pdfpath":"PATH",
+    "pdfpath":"YOUR_PATH",
     "oura":false,
     "oura_key":"",
-    "code":"42279",
-    "alias":{
-    }
+    "code":"111",
+    "alias":{}
 }

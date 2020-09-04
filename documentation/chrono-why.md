@@ -1,15 +1,10 @@
 # Realising MSSH.chrono
 
-After continuous use and development over months MSSH.chrono finally gets its first official release. This release is (probably) neither bug-free nor complete. It does however have all the core functionality that is planned for the near future AND all the data collected in this version will be useable in future releases.
-
-## What is Chrono supposed to do ?
-
-Chrono is there to quietly assist you through out you day, giving you the insight you need when you need it.
-If there is a change of plans you can tell chrono. If you need to know your next deadline, ask chrono. If you want to analyze and optimize your behavior, ask chrono.  If you are working/learning and you have a great thought tell chrono to leave a note.
+After continuous use and development over the last months MSSH.chrono finally gets its first official release. This release is (probably) neither bug-free nor complete. It does however have all the core functionality that is planned for the near future AND all the data collected in this version will be useable in future releases.
 
 ## Why Chrono ?
 
-Chrono is saving, managing and analyzing your day, deadlines and sleep patterns. Chrono requires no connection to the internet<sup id="a1">[1](#f1)</sup> and doesn't share any of your data! Chrono works best if it has a variety of data, but only one kind of data is needed for Chrono to be useful. The core idea is to split each day into ChronoEvents. You can visualize your days like a calendar or check for patterns in your behavior. You could for example use the heat map and plot features to check how you manage your time around deadlines or to analyze the time frames in which you typically do X. 
+Chrono is saving, managing and analyzing your day, deadlines and sleep patterns. Chrono requires no connection to the internet<sup id="a1">[1](#f1)</sup> and doesn't share any of your data! Chrono works best if it has a wide variety of data, but only one kind of data is needed for Chrono to be useful. The core idea is to split each day into ChronoEvents. You can visualize your days like a calendar or check for patterns in your behavior. You could for example use the heat map and plot features to check how you manage your time around deadlines or to analyze the time frames in which you typically do X. 
 ![Plot](Plot.png)
 ![Heatmap of a particular subject](heatmap.png)
 

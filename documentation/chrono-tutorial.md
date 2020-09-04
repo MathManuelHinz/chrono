@@ -16,9 +16,9 @@ The following dependencies are optional, but recommended:
 - $\LaTeX$
 - Adobe acrobat reader
 
-An oura account / ring is optional, but supported.
+An oura account / ring is supported, but optional.
 
-Besides the actual chrono program, you will need **2** or **3** files. All of them should already be inside the "data" folder.
+Besides the actual chrono program, you will need **2** or **3** files. All of them should already be inside the "data" folder. If you share your device or are otherwise concerned about the safety of your data, you can just use a tool of your choice to encrypt this folder.
 
 ### settings.json
 
@@ -165,7 +165,7 @@ sets the reference to the current date.
 "mkEvent" is one of the most important commands. It takes a **4-5** arguments (which are separated by spaces):
 
 1. "what" : Describe what the ChronoEvent represents (will be displayed if you export your data to pdf)
-2. "tags" : List of tags separated by ",". Those tags will later be used to categorize the event while you analyze your data. Each event should have all the tags, by which you want to analyze your time usage later.
+2. "tags" : List of tags separated by ",". Those tags will later be used to categorize the event while you analyze your data.
 3. "start" : The time at which your event starts, should be of the format "HH:MM".
 4. "stop" : The time at which your event ends, should be of the format "HH:MM".
 5. "force"="1" : If force $=1$ chrono will delete all overlapping events and add the current event to the referenced day. If force equals $0$ the event will not be added to the referenced day.
@@ -342,6 +342,8 @@ plot uni,blog
 plot uni,blog 14
 ```
 
+Note that you can use "sleep" as a tag to plot your sleep.
+
 ### heatmap
 
 heatmap takes **2-4** arguments and displays a heatmap of the given tag over the specified time frame.
@@ -373,9 +375,9 @@ stats blog,chrono
 
 ### Color scheme
 
-The "color_scheme" option allows you to customize the output of show. Each event will be color coded by the first of its tags appearing in your color scheme. The color scheme is a dictionary / hashmap where both the key and the value are strings. Your color scheme needs to have a key value pair for the key "default", which will be applied to all events not hit by any other key. Multiple keys can point to the same color and the color should be called the same as in vanilla [$\LaTeX$](https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX#Reference_guide).
+The "color_scheme" option allows you to customize the output of show. Each event will be color coded by the first of its tags appearing in your color scheme. The color scheme is a dictionary / hashmap where both the key and the value are strings. Your color scheme needs to have a key value pair for the key "default", which will be applied to all events not hit by any other key. Multiple keys can point to the same color and the color should be called the same as in [$\LaTeX$](https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX#Reference_guide).
 
-Example (my current setup):
+Example:
 ```javascript
 "color_scheme":{
         "default":"black",
@@ -404,7 +406,6 @@ A real life example: While coding and documenting chrono, I wanted to create chr
 "alias":{
         "mkc": "mkEvent Chrono chrono,programming $1 $2",
         "mkcb": "mkEvent \"Chrono: Blog\" chrono,programming,blog $1 $2"
-        "custom_plot": "plot $1 $N"
 }
 ```
 
@@ -415,12 +416,19 @@ Aliases can also include multiple commands:
 ```javascript
 "alias":{
     "startday":"setr today |> today",
-    "create_deadline":""
+    "create_deadline":"mkDay $4 |> $1 $2 $3 $4"
 }
 ```
 
 Use "|>" to separate commands. This is heavily inspired by f#'s "forward pipe operator".
 
+To insert all arguments, which haven't been mentioned previously:
+
+```javascript
+"alias":{
+    "mplot":"plot $1 $N"
+}
+```
 
 
 ## Oura

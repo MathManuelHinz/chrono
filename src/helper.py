@@ -1,3 +1,4 @@
+import logging
 from subprocess import call
 from typing import Dict, Generator, List, Tuple, IO, Callable, Any
 from functools import reduce
@@ -49,7 +50,7 @@ def get_color(scheme:Dict[str, str], tags:List[str])->str:
     for tag in tags:
         if tag in scheme.keys():
             return scheme[tag]
-    print(f"Used default color for {tags}")
+    logging.warn(f"Used default color for {tags}")
     return scheme["default"]
 
 def list_to_string(data:List[str])->str:
