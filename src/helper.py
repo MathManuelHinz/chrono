@@ -132,7 +132,7 @@ def seconds_to_time(seconds:int)->time:
     return time(hour=hours,minute=minutes,second=seconds) 
 
 def sleepdata_to_time(sleepdata:Tuple[time,time,bool])->time:
-    """Converts sleepdata to a time object describing the length the sleep.""" 
+    """Converts sleepdata to a time object describing the sleep duration.""" 
     return seconds_to_time(seconds=abs(get_tf_length((sleepdata[0],sleepdata[1]))-int(sleepdata[2])*(SECONDS_IN_A_DAY)))
 
 def what_or_none(l:List[Any],scheme:Dict[str,str])->str:

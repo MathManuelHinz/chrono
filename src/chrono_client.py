@@ -101,10 +101,6 @@ class ChronoDay:
         if event.end >= ce:
             self.day_end=event.end
 
-    def fill_empty(self, what:str="relax")->None: #not implemented yet
-        raise NotImplementedError
-        pass
-
     def get_slots(self)->List[ChronoEvent]:
         """Returns the events sorted by starting time."""
         return sorted(self.events, key=lambda x:x.start)
@@ -128,7 +124,7 @@ class ChronoDay:
                     self.add_event(e)
                     return self.merge()
 
-    def to_dict(self)->Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]:
+    def to_dict(self)->Dict[str, Union[str, Dict[str, Union[str, List[str]]],List[Dict[str, Union[str, List[str]]]]]]:
         """Used to save the object as a json."""
         d:Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]=dict()
         d["day_start"]=self.day_start.isoformat()
@@ -140,25 +136,25 @@ class ChronoDay:
         else: d["sleep"]=[str(self.sleep[0]),str(self.sleep[1]),self.sleep[2]]
         return d
 
-    def add_run(self, run:ChronoRunningEvent):
+    def add_run(self, run:ChronoRunningEvent)->None:
         """Adds a run event to the "runs" list."""
         self.sport["runs"].append(run)
 
-    def add_situp(self, sit:ChronoSitUpsEvent):
+    def add_situp(self, sit:ChronoSitUpsEvent)->None:
         """Adds a situp event to the "situp" list."""
         self.sport["situps"].append(sit)
 
-    def add_pushup(self, pu:ChronoPushUpEvent):
+    def add_pushup(self, pu:ChronoPushUpEvent)->None:
         """Adds a pushup event to the "pushup" list."""
         self.sport["pushups"].append(pu)
 
-    def add_plank(self, plank:ChronoPlankEvent):
+    def add_plank(self, plank:ChronoPlankEvent)->None:
         """Adds a plank event to the "plank" list."""
         self.sport["planks"].append(plank)
 
     def get_sleep(self)->time:
+        """Returns a time object representing the sleep attribute."""
         return sleepdata_to_time(self.sleep)
-        #return seconds_to_time(seconds=int(self.sleep[2])*(SECONDS_IN_A_DAY)-get_tf_length(self.sleep))
 
 class ChronoSchedule:
     
@@ -309,9 +305,11 @@ class ChronoProject:
         self.sevents.append(stime)
 
     def analysis_get(self, discriminator:Callable[[ChronoDay],bool])->List[ChronoDay]:
+        """Filters the self.days using the discriminator."""
         return [day for day in self.days.values() if discriminator(day)]
 
     def analysis_get_between(self, start_date:str,end_date:str)->List[ChronoDay]:
+        """Returns a sorted sublist of self.days."""
         ds=[day.date for day in self.days.values()]
         if start_date=="start": start_date=min(ds)
         else: start_date=date_from_str(start_date)
@@ -435,7 +433,7 @@ class MSSH:
 
     @staticmethod
     def c_get_current(project:ChronoProject, reference:str)->str:
-        """Get the current event."""
+        """Gets the current event."""
         if date.today().isoformat() in project.days.keys():
             for event in project.days[date.today().isoformat()].events:
                 if event.start <= datetime.now().time()<=event.end:
@@ -604,7 +602,7 @@ class MSSH:
 
     @staticmethod
     def c_plot_week(project:ChronoProject, reference:str, tags:str="mathe,programming,korean",k:str="7",start_date:str="start", end_date:str="stop")->str:
-        """Plots the hours of var:tags and their sum."""
+        """Plots the hours of var:tags and their sum. over the last var:k days"""
         k=int(k)
         tags=tags.split(",")
         assert not "sum" in tags
@@ -675,7 +673,7 @@ class MSSH:
     @staticmethod
     def c_todo(project:ChronoProject, reference:str)->str:
         """Prints todo list."""
-        print("Todo:")
+        print("Notes:")
         for i, note in enumerate(project.todo):
             print(str(i+1)+".: "+str(note))
         return reference
@@ -1000,6 +998,7 @@ class ChronoClient:
         return reference
 
     def c_lhof(self, project:ChronoProject, reference:str,args:str,f:str,*fargs:str)->str:
+        """var:f(var:args+var:fargs) """
         if f in self.command_set.keys():
             argsl=args.split(",")
             aargs=argsl+list(fargs)
@@ -1010,6 +1009,7 @@ class ChronoClient:
             return reference
 
     def c_rhof(self, project:ChronoProject, reference:str,args:str,f:str,*fargs:str)->str:
+        """var:f(var:var:fargs+args)"""
         if f in self.command_set.keys():
             argsl=args.split(",")
             aargs=list(fargs)+argsl
@@ -1020,6 +1020,7 @@ class ChronoClient:
             return reference
 
     def c_ihof(self, project:ChronoProject, reference:str,args:str,i:str,f:str,*fargs:str)->str:
+        """var:f(var:fargs[0:i]+var:args+var:fargs[i:]) """
         if f in self.command_set.keys():
             argsl=args.split(",")
             aargs=list(fargs)
@@ -1139,7 +1140,7 @@ def get_intersect_sum(day:ChronoDay, tags:List[str])->float:
 
 def restrict(days:List[ChronoDay], coupling:List[float], width:int)->List[ChronoDay]:
     """
-    Returns a subset of the list coupling, which are <= width day away from today.
+    Returns a subset of the list coupling, which are <= width days away from today.
     """
     tmp = date.today()
     rtn=[]
