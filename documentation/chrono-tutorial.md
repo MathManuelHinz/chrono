@@ -18,7 +18,7 @@ The following dependencies are optional, but recommended:
 
 An oura account / ring is supported, but optional.
 
-Besides the actual chrono program, you will need **2** or **3** files. All of them should already be inside the "data" folder. If you share your device or are otherwise concerned about the safety of your data, you can just use a tool of your choice to encrypt this folder.
+Besides the actual chrono program, you will need **2** or **3** files. All of them should already be inside the "data" folder. If you share your device or are otherwise concerned about the safety of your data, you can use a tool of your choice to encrypt this folder after each usage.
 
 ### settings.json
 

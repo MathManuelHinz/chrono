@@ -48,5 +48,7 @@ MSSH_COMMS={
     "filledays": MSSH.c_fill_empty_days,
     "exports": MSSH.c_export_sport,
     "exportweek": MSSH.c_exportweek,
+    "exportcsv": MSSH.c_to_csv,
+    "aliases": MSSH.c_aliases,
     "debug": lambda _,b,*x: print(b,x)
 }

@@ -1,5 +1,4 @@
 import logging
-from subprocess import call
 from typing import Dict, Generator, List, Tuple, IO, Callable, Any
 from functools import reduce
 from datetime import datetime, date, time
@@ -143,3 +142,6 @@ def what_or_none(l:List[Any],scheme:Dict[str,str])->str:
         return "\\textcolor{"+get_color(scheme, l[0].tags)+"}{"+f"{l[0].what}"+"}"  
     else:
         return "Nothing"
+
+def concatsem(a:str,b:str)->str:
+    return a+";"+b

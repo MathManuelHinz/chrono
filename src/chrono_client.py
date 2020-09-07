@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 from src.helper import (get_color, get_intersect, list_to_string, seconds_to_time, split_command,
                     write_table,get_seconds, time_from_str, date_from_str, get_tf_length, 
-                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time, cursed_get_lambda, what_or_none)
+                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time, cursed_get_lambda, what_or_none,concatsem)
 
 from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
                    ChronoPushUpEvent, ChronoSportEvent)
@@ -222,7 +222,10 @@ class ChronoProject:
     def add_day(self,day:ChronoDay)->None:
         """Adds a day to the days dict."""
         if not day.date.isoformat() in self.days.keys():
-            if not self.schedule == None:
+            if not self.settings["schedule"]:
+                day.day_start=time(hour=7,minute=0)
+                day.day_end=time(hour=21,minute=0)
+            else:
                 day.events += self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]
                 day.day_start, day.day_end = day.get_bounds()
             self.days[day.date.isoformat()]=day
@@ -938,6 +941,21 @@ class MSSH:
         if os.path.isfile("weekexport.toc"):os.remove("weekexport.toc")
         if os.path.isfile("weekexport.tex"):os.remove("weekexport.tex")
         subprocess.Popen([project.settings["pdfpath"],"weekexport.pdf"], shell=True)
+        return reference
+
+    @staticmethod
+    def c_to_csv(project:ChronoProject, reference:str,name:str,start_date:str="start",end_date:str="stop")->str:
+        """Exports the events of this project to a csv file."""
+        days=project.analysis_get_between(start_date, end_date)
+        with open(f"{name}.csv","w+") as f:
+            for day in days:
+                for event in day.events:
+                    f.write(f"{day.date.isoformat()},{event.what},{str(reduce(concatsem, event.tags))},{event.start.isoformat()},{event.end.isoformat()}\n")
+        return reference
+
+    @staticmethod
+    def c_aliases(project:ChronoProject, reference:str)->str:
+        print(list(project.alias.keys()))
         return reference
 
 class ChronoClient:
