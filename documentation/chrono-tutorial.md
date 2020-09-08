@@ -1,6 +1,6 @@
 # Chrono guide
 
-Welcome to the Chrono guide! You will learn how to setup Chrono and how to use it in no time! While Chrono may seem scary at first, I hope most will feel right at home quite quickly.
+Welcome to the Chrono guide! You will learn how to setup and use Chrono it in no time! While Chrono may seem scary at first, I hope most will feel right at home quite quickly.
 
 ## Setting up chrono
 
@@ -34,6 +34,7 @@ Besides the actual chrono program, you will need **2** or **3** files. All of th
     "oura":false,
     "oura_key":"",
     "code":"111",
+    "schedule": true,
     "alias":{}
 }
 ```
@@ -93,25 +94,11 @@ You can add a "schedule.json" file, which should look like this
 ]
 ```
 
-But could also look like
-
-```javascript
-[
-    [
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        []
-    ]
-]
-```
-
 Your Schedule can by n-weekly, and once you generate a day in chrono it will be populated according to your schedule.
 
 ## Basic commands
+
+Now that chrono is both setup and installed, run ```python chrono.py``` or ```chrono``` (depending on your setup) to open chrono!  
 
 ### Syntax
 
@@ -170,7 +157,7 @@ sets the reference to the current date.
 4. "stop" : The time at which your event ends, should be of the format "HH:MM".
 5. "force"="1" : If force $=1$ chrono will delete all overlapping events and add the current event to the referenced day. If force equals $0$ the event will not be added to the referenced day.
 
-Tip: If you find yourself repeating the same input, just with different start / stop value you can use an alias.
+Tip: If you find yourself repeating the same input, just with different start / stop value you can use an [alias](###Aliases).
 
 Example:
 
@@ -422,13 +409,14 @@ Aliases can also include multiple commands:
 
 Use "|>" to separate commands. This is heavily inspired by f#'s "forward pipe operator".
 
-To insert all arguments, which haven't been mentioned previously:
-
-```javascript
+Some commands share a pattern: plot,plotw,plotrun and heatmap all end with the same 2 arguments. You can can use rhof to insert a timeframe into each of them:
+```
 "alias":{
-    "mplot":"plot $1 $N"
+    "SS": "rhof start,2020-08-01 $1 $N"
 }
 ```
+
+SS inserts the start and end dates of the summer semester(2020) into a given function. rhof, which is short for right higher order function, appends the second argument (split by ',') to the 3rd to last arguments and applies the command with the same name as the 1st argument to those. lhof and ihof behave similarly.
 
 
 ## Oura

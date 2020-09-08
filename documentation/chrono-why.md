@@ -2,16 +2,19 @@
 
 After continuous use and development over the last months MSSH.chrono finally gets its first official release. This release is (probably) neither bug-free nor complete. It does however have all the core functionality that is planned for the near future AND all the data collected in this version will be useable in future releases.
 
-## Why Chrono ?
+## Chrono does things
 
-Chrono is saving, managing and analyzing your day, deadlines and sleep patterns. Chrono requires no connection to the internet<sup id="a1">[1](#f1)</sup> and doesn't share any of your data! Chrono works best if it has a wide variety of data, but only one kind of data is needed for Chrono to be useful. The core idea is to split each day into ChronoEvents. You can visualize your days like a calendar or check for patterns in your behavior. You could for example use the heat map and plot features to check how you manage your time around deadlines or to analyze the time frames in which you typically do X. 
+Chrono is saving, managing and analyzing your day, deadlines and sleep patterns. Chrono requires no connection to the internet<sup id="a1">[1](#f1)</sup> and doesn't share any of your data! Chrono works best if it has a wide variety of data, but only one kind of data is needed for Chrono to be useful. The core idea is to split each day into ChronoEvents. You can visualize your days like a calendar or check for patterns in your behavior. You could for example use the "heatmap" and "plot" commands to check how you manage your time around deadlines or to analyze the time frames in which you typically do X. 
 ![Plot](Plot.png)
 ![Heatmap of a particular subject](heatmap.png)
 
-Chrono is a basically a command line. There are no buttons, just you and your keyboard. You should be able to learn everything you want to do in chrono in 10 minutes, after that you will mostly increase your speed. There is no need to search through nested menus, because every command needs at most 1 previous command("setr") to work! If you feel like you are typing the same command over and over again, while only changing one argument, Chrono also features aliases (including currying!) to eliminate such repetitive inputs. 
+Chrono is a basically a command line. There are no buttons, just you and your keyboard. There is no need to search through nested menus, because every command needs at most 1 previous command("setr") to work! If you feel like you are typing the same command over and over again while only changing one argument, chrono also features aliases (including currying!) to eliminate such repetitive inputs. 
 
-Aliases give you the option to customize chrono in a meaningful way. Aliases support a pipe operator (think f#'s |>), partial function application, (limited) splicing and even simple higher order functions<sup id="a2">[2](#f2)</sup>. This should enable you to optimize your workflow immensely.
+Aliases give you the option to customize chrono in a meaningful way. Aliases support a pipe operator (think a simplified version of f#'s |>), partial function application, (limited) splicing and even simple higher order functions<sup id="a2">[2](#f2)</sup>. This should enable you to optimize your workflow immensely.
 
+## Reasons why you should use chrono
+
+Chrono is build in a way that tries to minimize the time in which you use chrono. Aliases, the CLI-nature of chrono and the design of the commands all contribute to this goal.
 I have personally used chrono for the last semester, adding features as I needed them. Therefore chrono doesn't come from a room full of designers, but from a user. While there is a vision, as well as a design philosophy behind the development of chrono, most features (beyond the original vision) come from a practical need. If you believe any features are missing feel free to add them your self or email me @ "mh[at]mssh.dev". If I also like the feature I will add it.
 
 Reminder: Chrono is open-source, so if you are missing a simple feature you can add it in no time ! You can also use chrono to collect your data and then analyze it yourself, because chrono safes your data in a (hopefully) well documented .json file.

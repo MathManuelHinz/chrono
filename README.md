@@ -1,10 +1,10 @@
 # MSSH.chrono
  
-More information coming, soon. For now:
+MSSH.chrono is a CLI, which saves and analyzes your data. Think of chrono as a calendar without a GUI, but with some capacity to analyze you data. Chrono can be heavily customized using a powerful feature called "aliases".
 
-Run "python chrono.py" once you have both python and chrono installed !
+Chrono was primarily tested on Windows. 
 
-You can just clone this repository and you are almost ready ! If you want to use the show command, 
-you need to change the settings file by setting "pdfpath" to your Adobe Acrobat reader. 
-If you have some kind of recurring schedule, it might be worth it to tell chrono in the schedule.json file ! 
-All the commands currently available are documented. Access the documentation my running "help cmd_name". To list all commands run "commands".
+Known issues:
+- If you compile chrono to a .exe using python-to-exe, you will get a warning on startup. This does not effect the functionality of chrono.  
+
+For a more detailed description read the tutorial- / release- blog posts.

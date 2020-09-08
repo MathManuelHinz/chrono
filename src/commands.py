@@ -50,5 +50,6 @@ MSSH_COMMS={
     "exportweek": MSSH.c_exportweek,
     "exportcsv": MSSH.c_to_csv,
     "aliases": MSSH.c_aliases,
+    "runsum": MSSH.c_runsum,
     "debug": lambda _,b,*x: print(b,x)
 }

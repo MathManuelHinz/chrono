@@ -3,7 +3,7 @@
         "default":"black"
     },
     "pdfpath":"YOUR_PATH",
-    "schedule": false,
+    "schedule": true,
     "oura":false,
     "oura_key":"",
     "code":"111",

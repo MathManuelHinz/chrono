@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 
 from src.helper import (get_color, get_intersect, list_to_string, seconds_to_time, split_command,
                     write_table,get_seconds, time_from_str, date_from_str, get_tf_length, 
-                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time, cursed_get_lambda, what_or_none,concatsem)
+                    WEEKDAYS, MSSH_color_scheme, sleepdata_to_time, cursed_get_lambda, what_or_none, 
+                    concatsem, get_pace_ticks)
 
 from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
                    ChronoPushUpEvent, ChronoSportEvent)
@@ -20,6 +21,8 @@ from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent,
 from src.atoms import (ChronoEvent, ChronoTime, ChronoNote)
 
 from src.oura import get_sleep
+
+VERSION="1.0.0"
 
 class ChronoDay:
     """This class is used to organize ChronoEvent- and  ChronoTimes-objects. 
@@ -225,7 +228,7 @@ class ChronoProject:
             if not self.settings["schedule"]:
                 day.day_start=time(hour=7,minute=0)
                 day.day_end=time(hour=21,minute=0)
-            else:
+            elif day.events==[]:
                 day.events += self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]
                 day.day_start, day.day_end = day.get_bounds()
             self.days[day.date.isoformat()]=day
@@ -237,7 +240,7 @@ class ChronoProject:
         self.days[date].add_event(event, force)
 
     def __repr__(self)->str:
-        """Represent this object as a string."""
+        """Represents this object as a string."""
         return reduce(lambda a,b: a+"\n"+b, [day.__repr__() for day in self.days.values()])
 
     def get_meta(self)->List[str]:
@@ -548,18 +551,26 @@ class MSSH:
     @staticmethod
     def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe,programming", start_date:str="start", end_date:str="stop")->str:
         """Plots the hours of var:tags and their sum."""
+
+        #preperation
         tags=tags.split(",")
         assert not "sum" in tags
         days = project.analysis_get_between(start_date, end_date)
         n=len(days)
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
+
+
+        #sleep preperation
         if "sleep" in tags:
             if project.day_zero_sleep==():
                 ys["sleep"].append(0)
             else:
                 sleep=project.day_zero_sleep
                 ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
+        
+
+        #populate ys
         for day in days:
             for tag in tags:
                 if not tag in project.forbidden:
@@ -569,8 +580,12 @@ class MSSH:
                         ys["sleep"].append(get_seconds(day.get_sleep())/3600)
                     else:
                         ys["sleep"].append(0)
+        
+
         if "sleep" in tags: 
             ys["sleep"]=ys["sleep"][:-1]
+
+        #Calculate overhead (sum)
         corr=[0 for _ in days]
         for i in range(n):
             for event in days[i].events:
@@ -578,27 +593,36 @@ class MSSH:
                     corr[i] += ((datetime.combine(date.today(), event.end)\
                      - datetime.combine(date.today(), event.start))\
                 .seconds/3600)*(len(I)-1) 
-        ys["sum"]=[sum([ys[tag][i] for tag in tags if not tag=="sleep"])-corr[i] for i in range(n)] #fix here
+        
+
+        ys["sum"]=[sum([ys[tag][i] for tag in tags if not tag=="sleep"])-corr[i] for i in range(n)]
+        
+        #plot tags+sum
         ax=plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
         for tag in ys.keys():
             plt.plot(xs, ys[tag], label=tag)
+
+        #Calculate and plot weekday average
         if not days == []: 
             zeroday=days[0].date.weekday()
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(xs,[WDA[day.date.weekday()] for day in days],"--",label="wda")
+        
+        #Mark "reference" with a *
         if reference in [day.date for day in days]:
             d=-1
             tmp=date_from_str(reference)
             for i in range(len(days)):
                 if days[i].date==tmp:
                     d=i
-            print(d)
             try: plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
             except:
                 logging.warn("Some days are missing.")
                 print("Some days are missing.")
+        
+        #visuals
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xlabel("Days")
         plt.ylabel("Hours")
@@ -608,6 +632,7 @@ class MSSH:
     @staticmethod
     def c_plot_week(project:ChronoProject, reference:str, tags:str="mathe,programming,korean",k:str="7",start_date:str="start", end_date:str="stop")->str:
         """Plots the hours of var:tags and their sum. over the last var:k days"""
+        #prep.
         k=int(k)
         tags=tags.split(",")
         assert not "sum" in tags
@@ -617,17 +642,21 @@ class MSSH:
         if end_date=="stop": end_date=max(ds)
         else: end_date=date_from_str(end_date)
         assert (end_date-start_date).days>=k
-        days=list(sorted(project.analysis_get(lambda x: start_date<=x.date<=end_date), key=lambda x: x.date))
+        days=project.analysis_get_between(start_date, end_date)
         n=len(days)
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
         days = list(sorted(project.days.values(), key=lambda x: x.date))
+
+        #sleep prep.
         if "sleep" in tags:
             if project.day_zero_sleep==():
                 ys["sleep"].append(0)
             else:
                 sleep=project.day_zero_sleep
                 ys["sleep"].append(get_seconds(sleepdata_to_time(sleep))/3600)
+        
+        #populate ys
         for day in days:
             for tag in tags:
                 if not tag=="sleep":
@@ -637,31 +666,45 @@ class MSSH:
                         ys["sleep"].append(get_seconds(day.get_sleep())/3600)
                     else:
                         ys["sleep"].append(0)
+        
         if "sleep" in tags: ys["sleep"]=ys["sleep"][:-1]
+        
+        #Calculate overhead (sum)
         corr=[0 for _ in days]
         for i in range(n):
             corr[i]=get_intersect_sum(days[i], tags)
+        
         ys["sum"]=[sum([ys[tag][i] for tag in tags if not tag=="sleep"])-corr[i] for i in range(n)]
+        
         ax=plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        
+        #prep. week splice
         tmp = min(date_from_str(reference),end_date)
         d=(tmp-start_date).days
         week_splice=lambda x : x[d-k:d+1]
+
+        #plot filtered ys
         for tag in ys.keys():
             try: plt.plot(week_splice(xs), week_splice(ys[tag]), label=tag)
             except:
-                print(tag)
-                print(week_splice(xs), week_splice(ys[tag]))
+                logging.warn(tag)
+                logging.warn(week_splice(xs), week_splice(ys[tag]))
+
+        #Calculate and plot weekday average
         if not days == []: 
             zeroday=days[0].date.weekday()
             WDA=[sum(wds:=[ys["sum"][i] for i in range(n) if (i+zeroday)%7==wd])/max(len(wds),1) for wd in range(7)] 
             plt.plot(week_splice(xs),week_splice([WDA[day.date.weekday()] for day in days]),"--",label="wda")
+        
+        #Mark "reference" with a *
         if tmp.isoformat() in project.days.keys():
             try: plt.scatter([d], ys["sum"][d], label="Today", marker="*", color="red", s=[70])
             except:
                 logging.warn("Some days are missing.")
                 print("Some days are missing.")
+        
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.xticks(week_splice(xs), week_splice([WEEKDAYS[day.date.weekday()][0:3]+"." for day in days]))
         plt.xlabel("Days")
@@ -677,7 +720,7 @@ class MSSH:
 
     @staticmethod
     def c_todo(project:ChronoProject, reference:str)->str:
-        """Prints todo list."""
+        """Prints all saved notes."""
         print("Notes:")
         for i, note in enumerate(project.todo):
             print(str(i+1)+".: "+str(note))
@@ -695,12 +738,7 @@ class MSSH:
         """Displays stats for given tags."""
         tags=tags.split(",")
         hours=[]
-        ds=[day.date for day in project.days.values()]
-        if start_date=="start": start_date=min(ds)
-        else: start_date=date_from_str(start_date)
-        if end_date=="stop": end_date=max(ds)
-        else: end_date=date_from_str(end_date)
-        days=list(project.analysis_get(lambda x: start_date<=x.date<=end_date))
+        days=project.analysis_get_between(start_date, end_date)
         for tag in tags:
             hours=[]
             for day in days:
@@ -851,11 +889,32 @@ class MSSH:
         """Plots the distance run each day in between [start_date, end_date]."""
         days = project.analysis_get_between(start_date, end_date)
         n=len(days)
-        xs=[i for i in range(n)]
-        ys=[]
-        for day in days:
-            ys.append(sum([run.distance for run in day.sport["runs"]]))
-        plt.plot(xs,ys)
+        xs=[]
+        ys=[]#distance  
+        ysp=[]#pace
+
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twinx()
+
+        ax1.set_xlabel("Days")
+        ax1.set_ylabel("Distance")
+        ax2.set_ylabel("Pace")
+
+        for i in range(len(days)):
+            lengths=sum([run.time for run in days[i].sport["runs"]])
+            distance=sum([run.distance for run in days[i].sport["runs"]])
+            pace=lengths/max(distance,1)
+            if distance > 0:
+                xs.append(i)
+                ys.append(distance)
+                ysp.append(pace)
+        ax1.scatter(xs,ys,label="Distance",color="b")
+        ax2.plot(xs,ysp,label="Pace",color="r")
+        ticks=get_pace_ticks(ysp)
+        ax2.set_yticks(ticks[0])
+        ax2.set_yticklabels(ticks[1])
+        ax1.legend()
+        ax2.legend()
         plt.show()  
         return reference
 
@@ -955,8 +1014,30 @@ class MSSH:
 
     @staticmethod
     def c_aliases(project:ChronoProject, reference:str)->str:
+        """Prints all aliases."""
         print(list(project.alias.keys()))
         return reference
+
+    @staticmethod
+    def c_runsum(project:ChronoProject, reference:str,k:str="6")->str:
+        """Displays a short analysis of all runs which happend up to var:k days before var:reference."""
+        if reference in project.days.keys():
+            start=date_from_str(reference)
+            end=start-timedelta(days=int(k))
+            runs=sum([day.sport["runs"] for day in project.analysis_get_between(end.isoformat(),reference)], [])
+            if runs==[]:
+                print("Runs=[]")
+            else:
+                lengths=sum([run.time for run in runs])
+                lengtht=seconds_to_time(int(lengths))
+                distance=sum([run.distance for run in runs])
+                pace=seconds_to_time(int(lengths/distance))
+                print(f"{reference}: You ran {distance} in {lengtht}. That makes a pace of {pace.isoformat()[3:]} per kilometer.")
+        else:
+            logging.warn(f"Can't find reference: {reference}")
+            print("Reference not found")
+        return reference
+
 
 class ChronoClient:
 
@@ -1063,16 +1144,16 @@ class ChronoClient:
         self.command_set["rhof"]=self.c_rhof
         self.command_set["ihof"]=self.c_ihof
 
-    def __init__(self, path:str, command_set:Dict[str, Callable[[Union[List[str],ChronoProject],str], None]]={}):
+    def __init__(self, path:str,s:ChronoSchedule,command_set:Dict[str, Callable[[Union[List[str],ChronoProject],str], None]]={}):
         self.path=path
         self.project=None
         self.command_set=command_set
         logging.basicConfig(filename="data/log.txt", level=logging.INFO)
-        self.build_ChronoProject()
+        self.build_ChronoProject(s)
 
     def run(self)->None:
         """ Main loop of Chrono."""
-        logging.info(f"run at : {datetime.today()}")
+        logging.info(f"run at : {datetime.today()}, Version: {VERSION}")
         if self.project== None:
             raise Exception("Missing project")
         last_command=""
@@ -1105,12 +1186,13 @@ class ChronoClient:
                     print("This command does not exist")
         logging.shutdown()
 
-    def build_ChronoProject(self, path:Optional[str]=None)->None:
+    def build_ChronoProject(self, s:ChronoSchedule=None, path:Optional[str]=None)->None:
         """ Builds a ChronoProject from a given path. """
         if path == None: path=self.path
         with open("data/"+path+".json", "r+", encoding="utf-8") as f:
             d=json.load(f)
         p=ChronoProject(name=d["name"], path=d["path"])
+        if not s==None: p.set_schedule(s)
         for note in d["todo"]:
             p.todo.append(ChronoNote(note["text"], datetime.fromisoformat(note["datetime"])))
         for day in d["days"].values():

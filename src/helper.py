@@ -145,3 +145,8 @@ def what_or_none(l:List[Any],scheme:Dict[str,str])->str:
 
 def concatsem(a:str,b:str)->str:
     return a+";"+b
+
+def get_pace_ticks(ysp:List[float],n:int=5)->Tuple[List[float],List[str]]:
+    ysp.sort()
+    assert not n==0
+    return [ysp[i*int(len(ysp)/n)] for i in range(n)], [seconds_to_time(int(ysp[i*int(len(ysp)/n)])).isoformat()[3:] for i in range(n)]
