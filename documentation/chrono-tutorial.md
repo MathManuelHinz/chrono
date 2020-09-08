@@ -157,7 +157,7 @@ sets the reference to the current date.
 4. "stop" : The time at which your event ends, should be of the format "HH:MM".
 5. "force"="1" : If force $=1$ chrono will delete all overlapping events and add the current event to the referenced day. If force equals $0$ the event will not be added to the referenced day.
 
-Tip: If you find yourself repeating the same input, just with different start / stop value you can use an [alias](###aliases).
+Tip: If you find yourself repeating the same input, just with different start / stop value you can use an alias.
 
 Example:
 
