@@ -139,7 +139,7 @@ def what_or_none(l:List[Any],scheme:Dict[str,str])->str:
     If the given list has no first element the string \"Nothing\" is returned."""
 
     if len(l)>0:
-        return "\\textcolor{"+get_color(scheme, l[0].tags)+"}{"+f"{l[0].what}"+"}"  
+        return "\\textcolor{"+get_color(scheme, l[0].tags)+"}{"+f"{l[0].what[:15]}"+"}"  
     else:
         return "Nothing"
 

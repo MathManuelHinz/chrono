@@ -976,7 +976,7 @@ class MSSH:
     def c_exportweek(project:ChronoProject, reference:str,end_date:str="stop")->str:
         """ Exports 7 days ending on var:end_date to a LaTeX -> PDF file and opens the file."""
         days=project.analysis_get_between("start", end_date)[-7:]
-        header=["\\documentclass{article}", "\\usepackage{xcolor}","\\usepackage{hyperref}"]
+        header=["\\documentclass{article}", "\\usepackage{xcolor}","\\usepackage{hyperref}","\\usepackage{pdflscape}"]
         poi=set()
         for day in days:
             for event in day.events:
@@ -987,9 +987,11 @@ class MSSH:
         with open("weekexport.tex", "w+", encoding="utf-8") as f:
             f.write(list_to_string(header)+"\n"+list_to_string(project.get_meta())+"\n")
             f.write("\\begin{document}\n")
+            f.write("\\begin{landscape}\n")
             f.write("\\maketitle\n")
-            data=[["Timeslots"]+[WEEKDAYS[day.date.weekday()] for day in days]]+[[f"{slot[0].isoformat()}-{slot[1].isoformat()}"]+[what_or_none(list(filter(lambda x: check_in_timeframe(slot,x),days[i].events)), project.scheme) for i in range(7)] for slot in slots]
+            data=[["Timeslots"]+[WEEKDAYS[day.date.weekday()] for day in days]]+[[f"{slot[0].isoformat()[:-3]}-{slot[1].isoformat()[:-3]}"]+[what_or_none(list(filter(lambda x: check_in_timeframe(slot,x),days[i].events)), project.scheme) for i in range(7)] for slot in slots]
             write_table(f, [8, len(slots)+1], data=data)
+            f.write("\\end{landscape}\n")
             f.write("\\end{document}\n")
         subprocess.run(["pdflatex", "weekexport.tex"], stdout=subprocess.DEVNULL)
         subprocess.run(["pdflatex", "weekexport.tex"], stdout=subprocess.DEVNULL)
