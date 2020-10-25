@@ -32,7 +32,7 @@ Each ChronoTime is described by two key/value pairs:
 - "tdate": ISO string format representation of the date.
 - "start": ISO string format representation of the time.
 - "what": A short string describing the ChronoTime
-- "tags": A list of user generated tags (strings).
+- "tags": A list of user-generated tags (strings).
 
 ## Key: "days"
 
@@ -41,8 +41,6 @@ A Map of ChronoDays. The key to each ChronoDay is the ISO formatted string of it
 ### ChronoDay
 Each day is a Map with the following key/value pairs:
 
-- "day_start": Time at which the first event began.
-- "day_end": Time at which the last event ended.
 - "date": same as the key
 - A list of 3 values:
     - "bedtime_start" (HH:MM)

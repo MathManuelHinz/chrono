@@ -2,14 +2,13 @@
 
 Welcome to the Chrono guide! You will learn how to setup and use Chrono it in no time! While Chrono may seem scary at first, I hope most will feel right at home quite quickly.
 
-## Setting up chrono
+## Setting up Chrono
 
 ### Dependencies
 
-If you open chrono using the source files you will need to match the following requirements:
+If you open Chrono using the source files you will need to match the following requirements:
 
-- python 3.8 (or higher)
-- matploblib 
+- python 3.8 (python 3.9, which changed some standard functions, has not been tested)
 
 The following dependencies are optional, but recommended:
 
@@ -18,7 +17,12 @@ The following dependencies are optional, but recommended:
 
 An oura account / ring is supported, but optional.
 
-Besides the actual chrono program, you will need **2** or **3** files. All of them should already be inside the "data" folder. If you share your device or are otherwise concerned about the safety of your data, you can use a tool of your choice to encrypt this folder after each usage.
+
+### Installation
+
+Clone [this repo](https://github.com/MathManuelHinz/chrono). Then adjust your settings.json file in the following way:
+
+If you share your device or are otherwise concerned about the safety of your data, you can use a tool of your choice to encrypt the data folder after each usage.
 
 ### settings.json
 
@@ -39,7 +43,7 @@ Besides the actual chrono program, you will need **2** or **3** files. All of th
 }
 ```
 
-Remember to change the value of "pdfpath" to the path of your Adobe Acrobat reader if you want to use the "show" command. If you want to use oura to import your sleep data add your Personal Access Token as the "oura_key" value and set oura to true.
+Remember to change the value of "pdfpath" to the path of your Adobe Acrobat reader if you want to use the "show" command. If you want to use oura to import your sleep data add your [Personal Access Token](https://support.ouraring.com/hc/en-us/articles/360051560614-Using-Oura-s-API) as the "oura_key" value and set the "oura"-value to true.
 
 ### project.json
 
@@ -94,11 +98,11 @@ You can add a "schedule.json" file, which should look like this
 ]
 ```
 
-Your Schedule can by n-weekly, and once you generate a day in chrono it will be populated according to your schedule.
+Your Schedule can by n-weekly, and once you generate a day in Chrono it will be populated according to your schedule.
 
 ## Basic commands
 
-Now that chrono is both setup and installed, run ```python chrono.py``` or ```chrono``` (depending on your setup) to open chrono!  
+Now that Chrono is both set up and installed, run ```python chrono.py``` to open it!  
 
 ### Syntax
 
@@ -137,7 +141,7 @@ Chrono always works within a reference scope, which you can change with:
 setr [reference]
 ```
 
-The default reference is "base", but your reference should be of the format "YYYY-MM-DD", to tell chrono which day you are manipulating. If you set you reference to a day which hasn't been generated yet, chrono will generate a day for you respecting your "schedule.json" file.
+The default reference is "base", but your reference should be of the format "YYYY-MM-DD", to tell Chrono which day you are manipulating. If you set you reference to a day which hasn't been generated yet, Chrono will generate a day for you respecting your "schedule.json" file.
 
 A useful shortcut:
 
@@ -155,9 +159,9 @@ sets the reference to the current date.
 2. "tags" : List of tags separated by ",". Those tags will later be used to categorize the event while you analyze your data.
 3. "start" : The time at which your event starts, should be of the format "HH:MM".
 4. "stop" : The time at which your event ends, should be of the format "HH:MM".
-5. "force"="1" : If force $=1$ chrono will delete all overlapping events and add the current event to the referenced day. If force equals $0$ the event will not be added to the referenced day.
+5. "force"="1" : If force $=1$ Chrono will delete all overlapping events and add the current event to the referenced day. If force equals $0$ the event will not be added to the referenced day.
 
-Tip: If you find yourself repeating the same input, just with different start / stop value you can use an alias.
+Tip: If you find yourself repeating the same input, just with different start / stop values you can use an alias.
 
 Example:
 
@@ -167,7 +171,7 @@ mkEvent Chrono chrono,programming 15:00 16:00
 
 ### help
 
-"help" takes **1** argument, which should be the name of a command or an alias. Help will give you the signature of the command as well as a short description of the functionality if the argument is a command. If the argument is an alias chrono will print the alias itself. You can gather even more information by calling help on the commands used by the alias.
+"help" takes **1** argument, which should be the name of a command or an alias. Help will give you the signature of the command as well as a short description of the functionality if the argument is a command. If the argument is an alias Chrono will print the alias itself. You can gather even more information by calling help on the commands used by the alias.
 
 Example:
 
@@ -213,7 +217,7 @@ save saves the current state of the project to the same file the project was rea
 
 ### note
 
-note takes **1-n** arguments which will be combined to **1** argument by concatenating the n arguments split up by spaces.
+note takes **1 or more** arguments which will be combined to **1** argument by concatenating the n arguments split up by spaces.
 
 1. text: The note to be saved.
 2. *texts: the other n-1 arguments.
@@ -362,7 +366,7 @@ stats blog,chrono
 
 ### Color scheme
 
-The "color_scheme" option allows you to customize the output of show. Each event will be color coded by the first of its tags appearing in your color scheme. The color scheme is a dictionary / hashmap where both the key and the value are strings. Your color scheme needs to have a key value pair for the key "default", which will be applied to all events not hit by any other key. Multiple keys can point to the same color and the color should be called the same as in [$\LaTeX$](https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX#Reference_guide).
+The "color_scheme" option allows you to customize the output of show. Each event will be color-coded by the first of its tags appearing in your color scheme.The color scheme is a dictionary / hashmap where both the key and the value are strings. Your color scheme needs to have a key-value pair for the key "default", which will be applied to all events not hit by any other key. Multiple keys can point to the same color and the color should be called the same as in [$\LaTeX$](https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX#Reference_guide).
 
 Example:
 ```javascript
@@ -380,14 +384,14 @@ Example:
 
 ### Aliases
 
-If you find yourself writing the same command over and over again only changing the one or two arguments each time, you might want to use an alias. An alias uses partial function application to only require those inputs regularly changing. 
+If you find yourself writing the same command over and over again only changing one or two arguments each time, you might want to use an alias. An alias uses partial function application to only require those inputs regularly changing. 
 
 Each alias uses the following structure:
 
-Write out the command as you would type it in chrono, but replace each argument that should be given to your alias
+Write out the command as you would type it in Chrono, but replace each argument that should be given to your alias
 with "\$1","\$2" up to some finite "\$n". Be aware that those arguments start at \$1 and not \$0! If you want to reference all the arguments not referenced explicitly, you can use $N which will insert all of those arguments
 
-A real life example: While coding and documenting chrono, I wanted to create chrono events with the same name and tag quite frequently, so I added the following alias:
+A real-life example: While coding and documenting Chrono, I wanted to create Chrono events with the same name and tag quite frequently, so I added the following alias:
 
 ```javascript
 "alias":{
@@ -409,20 +413,17 @@ Aliases can also include multiple commands:
 
 Use "|>" to separate commands. This is heavily inspired by f#'s "forward pipe operator".
 
-Some commands share a pattern: plot,plotw,plotrun and heatmap all end with the same 2 arguments. You can can use rhof to insert a timeframe into each of them:
+Some commands share a pattern: plot,plotw,plotrun and heatmap all end with the same 2 arguments. You can use rhof to insert a timeframe into each of them:
 ```
 "alias":{
     "SS": "rhof start,2020-08-01 $1 $N"
 }
 ```
 
-SS inserts the start and end dates of the summer semester(2020) into a given function. rhof, which is short for right higher order function, appends the second argument (split by ',') to the 3rd to last arguments and applies the command with the same name as the 1st argument to those. lhof and ihof behave similarly.
+SS inserts the start and end dates of the summer semester(2020) into a given function. rhof, which is short for right higher-order function, appends the second argument (split by ',') to the 3rd to last arguments and applies the command with the same name as the 1st argument to those. lhof and ihof behave similarly.
 
+$$\text{rhof}(f,cs,(x_k)_{k=3,k\leq n})=f(x_3,x_4,\dots,x_n,cs_1,cs_r)$$
 
 ## Oura
 
-If you use an [oura ring](https://ouraring.com/) to track your sleep you can import your sleep data using "ouras". Call "help ouras" for more information regarding the command. Before you can use this command you will have to setup your connection to oura. Go to your settings file ("data/settings.json") and set oura to true. Next create a [personal access token](https://support.ouraring.com/hc/en-us/articles/360051560614-Using-Oura-s-API) and set the "oura_key" value accordingly.
-
-## Structure 
-
-![](ChronoStructure.svg)
+If you use an [oura ring](https://ouraring.com/) to track your sleep you can import your sleep data using "ouras". Call "help ouras" for more information regarding the command. Before you can use this command you will have to set up your connection to oura. Go to your settings file ("data/settings.json") and set oura to true. Next create a [personal access token](https://support.ouraring.com/hc/en-us/articles/360051560614-Using-Oura-s-API) and set the "oura_key" value accordingly.
