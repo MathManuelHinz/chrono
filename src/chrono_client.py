@@ -28,8 +28,6 @@ class ChronoDay:
     """This class is used to organize ChronoEvent- and  ChronoTimes-objects. 
     Each page in the exported pdf should correspond to one ChronoDay-object."""
      
-    day_start:time
-    day_end:time
     events:List[ChronoEvent]
     date:date
     silent_events:List[ChronoTime]
@@ -37,28 +35,14 @@ class ChronoDay:
     sleep:Tuple[time]
 
 
-    def __init__(self, events:List[ChronoEvent], input_date:str,day_start:Optional[str]=None, day_end:Optional[str]=None):
-        """Constructor: ChronoDay. day_start and day_end input will be converted to a time object, 
+    def __init__(self, events:List[ChronoEvent], input_date:str):
+        """Constructor: ChronoDay.
         input_date will be converted to a date object and
         events will be saved as is. 
         Attributes:
-            events: A list of ChronoEvents. Should be none empty if day_start, day_end are omitted, unless a schedule is used.
-            input_date: The date of the Day. Should be of the format YYYY-MM-DD
-            day_start: Optional, if events isn`t empty. Should be of the format HH:MM
-            day_end: Optional, if events isn`t empty. Should be of the format HH:MM"""
+            events: A list of ChronoEvents. 
+            input_date: The date of the Day. Should be of the format YYYY-MM-DD"""
         self.events=events
-        if not events == []:
-            maxmin=self.get_bounds()
-        if day_start == None:
-            try: self.day_start=maxmin[0]
-            except: logging.warning("ChronoDay needs to have at least one of the following: none empty events list, day_start")
-        else:
-            self.day_start=time_from_str(day_start)
-        if day_end == None:
-            try: self.day_end=maxmin[1]
-            except: logging.warning("ChronoDay needs to have at least one of the following: none empty events list, day_end.")
-        else:
-            self.day_end=time_from_str(day_end)
         self.date=date_from_str(input_date)
         self.silent_events=[]
         self.sport={"runs":[],"pushups":[],"planks":[],"situps":[]}
@@ -67,8 +51,8 @@ class ChronoDay:
     def __repr__(self)->str:
         """Returns a string representation of this object. Used by the command today"""
         if self.events == []:
-            return  f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n"
-        else: return f"{self.date.__str__()}:\n\nFrom {self.day_start.isoformat()} till {self.day_end.isoformat()}\n\n" + reduce(lambda a,b: a+"\n\n"+b, [event.__repr__() for event in sorted(self.events, key=lambda x: x.start)])
+            return  f"{self.date.__str__()}:\n\n"
+        else: return f"{self.date.__str__()}:\n" + reduce(lambda a,b: a+"\n\n"+b, [event.__repr__() for event in sorted(self.events, key=lambda x: x.start)])
 
     def check_overlap(self, event1:ChronoEvent, event2:ChronoEvent)->bool:
         """Checks if two events overlap."""
@@ -85,7 +69,6 @@ class ChronoDay:
         This function tries to add an event to the events list. 
         This fails if there is an overlap with an already existing event. Adding the event can be forced by 
         setting force to True. In this case overlapping existing events will be deleted. 
-        Adding an event may change the day_start, day_end attributes.
         """
         if not reduce(lambda a,b: a or b, [self.check_overlap(e, event) for e in self.events], False) or self.events==[]:
             self.events.append(event)
@@ -98,11 +81,6 @@ class ChronoDay:
             for e in todel:
                 self.events.remove(e)
         else: raise Exception("Overlap")
-        cs, ce=self.get_bounds()
-        if event.start <= cs:
-            self.day_start=event.start
-        if event.end >= ce:
-            self.day_end=event.end
 
     def get_slots(self)->List[ChronoEvent]:
         """Returns the events sorted by starting time."""
@@ -130,8 +108,6 @@ class ChronoDay:
     def to_dict(self)->Dict[str, Union[str, Dict[str, Union[str, List[str]]],List[Dict[str, Union[str, List[str]]]]]]:
         """Used to save the object as a json."""
         d:Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]=dict()
-        d["day_start"]=self.day_start.isoformat()
-        d["day_end"]=self.day_end.isoformat()
         d["date"]=self.date.__str__()
         d["events"]=[event.to_dict() for event in self.events]
         d["sport"]={key:[entry.to_dict() for entry in self.sport[key]] for key in self.sport.keys()}
@@ -225,12 +201,8 @@ class ChronoProject:
     def add_day(self,day:ChronoDay)->None:
         """Adds a day to the days dict."""
         if not day.date.isoformat() in self.days.keys():
-            if not self.settings["schedule"]:
-                day.day_start=time(hour=7,minute=0)
-                day.day_end=time(hour=21,minute=0)
-            elif day.events==[]:
+            if self.settings["schedule"] and day.events==[]:
                 day.events += self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]
-                day.day_start, day.day_end = day.get_bounds()
             self.days[day.date.isoformat()]=day
         else:
             logging.warning(f"can`t add day {day.date.isoformat()}")
@@ -341,9 +313,9 @@ class MSSH:
     def c_create_day(project:ChronoProject, reference:str, date:str, start:str="08:00", end:str="22:00")->str:
         """Creates a ChronoDay given:"""
         if len(date.split("-"))==3:
-            project.add_day(ChronoDay(input_date=date, events=[], day_start=start, day_end=end))
+            project.add_day(ChronoDay(input_date=date, events=[]))
         elif date=="today":
-            project.add_day(ChronoDay(input_date=datetime.now().isoformat(), events=[], day_start=start, day_end=end))
+            project.add_day(ChronoDay(input_date=datetime.now().isoformat(), events=[]))
         else:
             print("failed")
             logging.info(f"failed: createDay({reference},{date},{start},{end})")
@@ -363,7 +335,7 @@ class MSSH:
                     print("Creating 2 Events ...")
                     logging.info("Creating 2 Events ...")
                     project.add_event(ChronoEvent(start=start, end="23:59", what=what, tags=tags.split(",")), reference, force=int(force))
-                    project.add_day(ChronoDay(input_date=next_day.isoformat(), events=[], day_start="00:00", day_end=end))
+                    project.add_day(ChronoDay(input_date=next_day.isoformat(), events=[]))
                     project.add_event(ChronoEvent(start="00:00", end=end, what=what, tags=tags.split(",")), reference, force=int(force))
             except Exception as e:
                 print(e)
@@ -878,10 +850,10 @@ class MSSH:
                 print("no runs today :(")
             else:
                 lengths=sum([run.time for run in project.days[reference].sport["runs"]])
-                lengtht=seconds_to_time(int(lengths))
+                length=seconds_to_time(int(lengths))
                 distance=sum([run.distance for run in project.days[reference].sport["runs"]])
                 pace=seconds_to_time(int(lengths/distance))
-                print(f"{reference}: You ran {distance} in {lengtht}. That makes a pace of {pace.isoformat()[3:]} per kilometer.")
+                print(f"{reference}: You ran {distance} in {length}. That makes a pace of {pace.isoformat()[3:]} per kilometer.")
         return reference
 
     @staticmethod
@@ -1200,7 +1172,7 @@ class ChronoClient:
         for day in d["days"].values():
             events=[ChronoEvent(start=event["start"], end=event["end"], what=event["what"], tags=event["tags"]) for event in day["events"]]
             sport={sport:day["sport"][sport] for sport in day["sport"].keys()}
-            p.add_day(ChronoDay(events=events, input_date=day["date"], day_start=day["day_start"], day_end=day["day_end"]))
+            p.add_day(ChronoDay(events=events, input_date=day["date"]))
             for run in sport["runs"]:
                 p.days[day["date"]].add_run(ChronoRunningEvent(run["time"],run["distance"],time_from_str(run["start_time"])))
             for situp in sport["situps"]:

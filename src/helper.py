@@ -5,7 +5,7 @@ from datetime import datetime, date, time
 from inspect import signature
 from collections.abc import Iterable
 
-WEEKDAYS=["Monday", "Tuesday", "Wendsday", "Thursday", "Friday","Saturday", "Sunday"]
+WEEKDAYS=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday", "Sunday"]
 
 SECONDS_IN_A_DAY=86400
 
