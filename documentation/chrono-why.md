@@ -5,8 +5,8 @@ After continuous use and development over the last months MSSH.chrono finally ge
 ## Chrono does things
 
 Chrono is saving, managing and analyzing your day, deadlines and sleep patterns. Chrono requires no connection to the internet<sup id="a1">[1](#f1)</sup> and doesn't share any of your data! Chrono works best if it has a wide variety of data, but only one kind of data is needed for Chrono to be useful. The core idea is to split each day into ChronoEvents. You can visualize your days or check for patterns in your behavior. You could for example use the "heatmap" and "plot" commands to check how you manage your time around deadlines or to analyze the time frames in which you typically do X. 
-![Plot](plot.png)
-![Heatmap of a particular subject](heatmap.png)
+![Plot](/images/plot.png)
+![Heatmap of a particular subject](/images/heatmap.png)
 
 Chrono is a command line. There are no buttons, just you and your keyboard. There is no need to search through nested menus because every command needs at most 1 previous command("setr") to work! If you feel like you are typing the same command over and over again while only changing one argument, Chrono also features aliases (including currying!) to eliminate such repetitive inputs. 
 

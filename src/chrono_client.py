@@ -1012,7 +1012,6 @@ class MSSH:
             print("Reference not found")
         return reference
 
-
 class ChronoClient:
 
     path:str
@@ -1106,6 +1105,10 @@ class ChronoClient:
             print(f"Can't find f: {f}") 
             return reference
 
+    def c_options(self, project:ChronoProject, reference:str)->str:
+        subprocess.Popen(["start","data/settings.json"], shell=True)
+        return self.c_refresh(project,reference)
+
     def add_commands(self)->None:
         """ Adds commands to the command set of this object."""
         self.command_set["quit"]=self.c_quit
@@ -1117,6 +1120,7 @@ class ChronoClient:
         self.command_set["lhof"]=self.c_lhof
         self.command_set["rhof"]=self.c_rhof
         self.command_set["ihof"]=self.c_ihof
+        self.command_set["options"]=self.c_options
 
     def __init__(self, path:str,s:ChronoSchedule,command_set:Dict[str, Callable[[Union[List[str],ChronoProject],str], None]]={}):
         self.path=path
