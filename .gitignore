@@ -1,0 +1,176 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+secrets.py
+log.txt
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+log.txt
+MSSH-Zeitplan.pdf
+.pdf
+MSSH-Zeitplan.pdf
+zeitplan.json
+MSSH-Zeitplan.pdf
+src/sample_response.json
+project_backup.json
+test.py
+Summary.pdf
+data/settings.json
+data/project_old.json
+data/project.json
+data/project - Kopie.json
+data/project - Kopie (2).json
+.vscode/settings.json
+.vscode/launch.json
+essen.gif
+data/settings.json
+data/project.json
+data/project.json
+data/settings.json
+*.gif
+todo.md
+.vscode/chronosnips.code-snippets
+data/project_old_sleep.json
+data/project_old_sleep.json
+data/schedule.json
+data/schedule.json
+data/project_old_sleep.json
+data/settings_old.json
+data/schedule_old.json
+examples/basic_workflow.md
+examples/setup.md
+jsons/graph.json
+pdfs/overview.pdf
+pdfs/weekexport.pdf
+sums/scai_2021-08-01_2021-08-31.csv
+sums/scai_2021-09-01_2021-09-30.csv
+sums/scai_start_stop.csv
+tmp.json
+todo.md
+old.git/
+*.pdf
+scai/
+data/settings_old_old.json
+data/project_gbl.json
+bug plotting.png
+changed.md
+data/project.db
