@@ -58,7 +58,14 @@ class ChronoEvent:
         self.start=time_from_str(start)
         self.end=time_from_str(end)
         self.what=what
-        self.tags=tags
+        self.tags=[]
+        for tag in tags:
+            if tag=="":
+                print("Empty tags are not allowed, this tag was ignored.")
+            elif tag[0]=="&":
+                print("Tags can not start with a &, this tag was ignored: "+tag)
+            else:
+                self.tags.append(tag)
         assert self.start<self.end
 
     def __repr__(self)->str:

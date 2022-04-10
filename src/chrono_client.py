@@ -649,8 +649,8 @@ class MSSH:
         #preperation
         MSSH.c_fill_empty_days(project,reference,start_date,end_date)
         atags=tags.split(",")
-        tags=[t for t in atags if not "!" == t[0]]
-        rtags=[t[1:] for t in atags if "!" == t[0]]
+        tags=[t for t in atags if not "&" == t[0]]
+        rtags=[t[1:] for t in atags if "&" == t[0]]
         ticksi=5
         r=int(r_str)
         days = project.analysis_get_between(start_date, end_date, reference)
@@ -1151,7 +1151,7 @@ class MSSH:
                 f.write("\\hypertarget{"+f"{rep_tag}"+"}{}\n")
                 f.write("\\begin{figure}[H]\n")
                 f.write("\\centering\n")
-                f.write("\$\n$cludegraphics{"+"./imgs/"+tag+".png"+"}\n")
+                f.write("\\includegraphics{"+"./imgs/"+tag+".png"+"}\n")
                 f.write("\\caption{"+rep_tag+"}\n")
                 f.write("\\end{figure}\n")
                 f.write("\\clearpage\n")
