@@ -71,7 +71,7 @@ def write_table(f:IO, dims:List[int], data:List[List[str]])->None:
     f.write("\\end{tabular}"+"\n")
     f.write("\\end{table}"+"\n")
 
-def split_command(command:str)->List[str]:
+def split_command(command:str)->List[str]:  # type: ignore
     """Splits commands by spaces, ignoring content in quotes."""
     if "\"" in command:
         s=int(command.find("\""))

@@ -52,7 +52,7 @@ class ChronoDay:
     date:date
     silent_events:List[ChronoTime]
     sport:Dict[str, List[ChronoSportEvent]]
-
+    functions:Dict[str,float] #implementieren!
 
     def __init__(self, events:List[ChronoEvent], input_date:str):
         """Constructor: ChronoDay.
@@ -67,6 +67,7 @@ class ChronoDay:
         self.sport={"runs":[],"pushups":[],"planks":[],"situps":[]}
         self.counter:Dict[str,int]={}
         self.sleep=()
+        self.functions=dict()
 
     def __repr__(self)->str:
         """Returns a string representation of this object. Used by the command today"""
@@ -134,6 +135,7 @@ class ChronoDay:
         d["events"]=[event.to_dict() for event in self.events]
         d["sport"]={key:[entry.to_dict() for entry in self.sport[key]] for key in self.sport.keys()}
         d["counter"]=self.counter
+        d["functions"]=self.functions
         return d
 
     def add_run(self, run:ChronoRunningEvent)->None:
@@ -179,7 +181,7 @@ class ChronoSchedule:
 
     def __init__(self, path:str):
         """Constructor of ChronoSchedule."""
-        with open("data/"+path, "r+", encoding="utf-8") as f:
+        with open(path, "r+", encoding="utf-8") as f:
             data=json.load(f)
         self.days=[[[] for _ in range(7)] for i in range(len(data["events"]))]
         for i,week in enumerate(data["events"]):
@@ -213,7 +215,7 @@ class ChronoProject:
         self.header=["\\documentclass{article}"]
         self.scheme=MSSH_color_scheme
         self.load_settings()
-        self.forbidden=[]
+        self.forbidden=["rem","deep","light","all_sleep"]
 
     def set_schedule(self,schedule:ChronoSchedule)->None:
         """Sets the schedule for this project."""
@@ -663,7 +665,12 @@ class MSSH:
             for tag in tags:
                 if not tag in project.forbidden:
                     ys[tag].append(get_time(day, tag, rtags))
-        
+                elif tag in ["rem","deep","light","all_sleep"]:
+                    if tag in day.functions.keys():
+                        ys[tag].append(day.functions[tag]/3600)
+                    else:
+                        ys[tag].append(0)
+
         #Calculate overhead (sum)
         corr=[0.0 for _ in days]
         for i in range(n):
@@ -674,7 +681,7 @@ class MSSH:
                 .seconds/3600)*(len(I)-1) 
         
 
-        if len(tags)>1: ys["sum"]=[sum([ys[tag][i] for tag in tags])-corr[i] for i in range(n)]
+        if len(tags)>1: ys["sum"]=[sum([ys[tag][i] for tag in tags if not tag in project.forbidden])-corr[i] for i in range(n)]
         
         #plot tags+sum
         ax=plt.subplot(111)
@@ -864,8 +871,14 @@ class MSSH:
             if sleepdata[0]:
                 keys=project.days.keys()
                 for key in sleepdata[1].keys():
-                    if sleepdata[1][key][2]==sleepdata[1][key][3]:
-                        e=ChronoEvent(sleepdata[1][key][0],sleepdata[1][key][1],"Oura Sleep", ["sleep","ouras","generated","connected_sleep"])
+                    project.days[key].functions["rem"]=sleepdata[1][key][4]
+                    project.days[key].functions["deep"]=sleepdata[1][key][5]
+                    project.days[key].functions["light"]=sleepdata[1][key][6]
+                    project.days[key].functions["all_sleep"]=sleepdata[1][key][4]+sleepdata[1][key][5]+sleepdata[1][key][6]
+                    if sleepdata[1][key][2]==sleepdata[1][key][3] or sleepdata[1][key][0][:5] == "23:59":
+                        if sleepdata[1][key][0][:5] == "23:59":e=ChronoEvent("00:01",sleepdata[1][key][1],"Oura Sleep", ["sleep","ouras","generated","connected_sleep"])
+                        else:
+                            e=ChronoEvent(sleepdata[1][key][0],sleepdata[1][key][1],"Oura Sleep", ["sleep","ouras","generated","connected_sleep"])
                         if not sleepdata[1][key][2] in keys:
                             project.add_day(ChronoDay([],sleepdata[1][key][2]))
                             project.days[sleepdata[1][key][2]].events = []
@@ -881,6 +894,7 @@ class MSSH:
                                 logging.warning(f"{sleepdata[1][key][2]}: Added {e} instead")
                                 project.add_event(e, sleepdata[1][key][2])
                     else:
+                        
                         e1=ChronoEvent(sleepdata[1][key][0],"23:59","Oura Sleep", ["sleep","ouras","generated","split_sleep"])
                         e2=ChronoEvent("00:01", sleepdata[1][key][1], "Oura Sleep", ["sleep","ouras","generated", "split_sleep"])
                         if not sleepdata[1][key][2] in keys:
@@ -907,7 +921,7 @@ class MSSH:
                             logging.warning(f"{sleepdata[1][key][3]}: Added {e2} instead")
         else:           
             print("No oura is linked: Check your settings")
-            logging.warn("No oura is linked: Check your settings")   
+            logging.warning("No oura is linked: Check your settings")   
         return reference 
 
     @staticmethod
@@ -1664,6 +1678,9 @@ class MSSH:
         #populate ys
         for day in days[index_offsets[0]:index_offsets[1]]:
             ys.append(get_time(day, tag))
+        if len(ys)>0:avg=sum(ys)/len(ys)
+        else: avg=0
+        ys=[y-avg for y in ys]
         N = index_offsets[1]-index_offsets[0]
         T = 1
         y = np.array(ys)
@@ -1671,7 +1688,6 @@ class MSSH:
         xf = [1/v if v!=0 else 2*(n+1) for v in list(fftfreq(N, T)[:N//2])]
         tmp=(2.0/N * np.abs(yf[:N//2]))
         plt.plot(xf, tmp,label=f"Influence(1/f)")
-        plt.plot([xf[0],xf[-1]],[tmp[0],tmp[0]],label="influence($f=0$)")
         if max_period_length=="max": max_period_length=str(n+1)
         plt.xlim(int(min_period_length),int(max_period_length))
         plt.grid()
@@ -1983,7 +1999,7 @@ class ChronoClient:
         self.path=path
         self.project=None
         self.command_set=command_set
-        logging.basicConfig(filename="data/log.txt", level=logging.INFO)
+        logging.basicConfig(filename="log.txt", level=logging.INFO)
         self.build_ChronoProject(s)
 
     def run(self)->None:
@@ -2024,7 +2040,7 @@ class ChronoClient:
     def build_ChronoProject(self, s:ChronoSchedule=None, path:Optional[str]=None)->None:
         """ Builds a ChronoProject from a given path. """
         if path == None: path=self.path
-        with open("data/"+path+".json", "r+", encoding="utf-8") as f:
+        with open(path+".json", "r+", encoding="utf-8") as f:
             d=json.load(f)
         p=ChronoProject(name=d["name"], path=d["path"])
         if not s==None: p.set_schedule(s)
@@ -2034,6 +2050,7 @@ class ChronoClient:
             events=[ChronoEvent(start=event["start"], end=event["end"], what=event["what"], tags=event["tags"]) for event in day["events"]]
             sport={sport:day["sport"][sport] for sport in day["sport"].keys()}
             p.add_day(ChronoDay(events=events, input_date=day["date"]))
+            p.days[day["date"]].functions=day["functions"]
             for run in sport["runs"]:
                 p.days[day["date"]].add_run(ChronoRunningEvent(run["time"],run["distance"],time_from_str(run["start_time"])))
             for situp in sport["situps"]:
