@@ -72,7 +72,7 @@ class ChronoDay:
         """Returns a string representation of this object. Used by the command today"""
         if self.events == []:
             return  f"{self.date.__str__()}:\n\n"
-        else: return f"{self.date.__str__()}:\n" + reduce(lambda a,b: a+"\n\n"+b, [event.__repr__() for event in sorted(self.events, key=lambda x: x.start)], "") +"\n"+ reduce(lambda a,b: a+"\n\n"+b, [key+" : "+str(self.counter[key]) for key in self.counter.keys()], "")
+        else: return f"{self.date.__str__()}:\n" + reduce(lambda a,b: a+"\n\n"+b, [event.__repr__() for event in sorted(self.events, key=lambda x: x.start)], "") +"\n"
 
     def check_overlap(self, event1:ChronoEvent, event2:ChronoEvent)->bool:
         """Checks if two events overlap."""
@@ -139,6 +139,7 @@ class ChronoDay:
     def add_run(self, run:ChronoRunningEvent)->None:
         """Adds a run event to the "runs" list."""
         self.sport["runs"].append(run)
+        self.update_after_run()
 
     def add_situp(self, sit:ChronoSitUpsEvent)->None:
         """Adds a situp event to the "situp" list."""
@@ -159,17 +160,18 @@ class ChronoDay:
     def get_tags(self)->List[str]:
         return list(set(reduce(lambda a,b:a+b,[event.tags for event in self.events])))
 
-    def delete_counter(self, counter:str):
-        logging.info(f"Deleted counter {counter} on {self.date}.")
-        if counter in self.counter.keys(): self.counter.pop(counter)
-
     def add_function(self, function_name:str, function_value:float):
         self.functions[function_name]=function_value
+        return
 
     def get_function(self, function_name:str)->float:
         if function_name in self.functions.keys():
             return self.functions[function_name]
         else: return 0
+    
+    def update_after_run(self):
+        self.add_function("run_time",sum([run.time/3600 for run in self.sport["runs"]]))
+        self.add_function("run_distance",sum([run.distance for run in self.sport["runs"]]))
 
 class ChronoSchedule:
     
@@ -212,7 +214,7 @@ class ChronoProject:
         self.header=["\\documentclass{article}"]
         self.scheme=MSSH_color_scheme
         self.load_settings()
-        self.forbidden=["rem","deep","light","all_sleep"]
+        self.forbidden=["rem","deep","light","all_sleep","run_distance","run_time"]
 
     def set_schedule(self,schedule:ChronoSchedule)->None:
         """Sets the schedule for this project."""
@@ -731,7 +733,7 @@ class MSSH:
         else:
             plt.xticks([round((n-1)*i/(ticksi-1)) for i in range(ticksi)], [days[round((n-1)*i/(ticksi-1))].date.isoformat() for i in range(ticksi)])
         plt.xlabel("Days")
-        plt.ylabel("Hours")
+        plt.ylabel("Quantity")
         logging.info("Displaying plot ...")
         plt.show()
         logging.info("Plot closed")
@@ -1715,6 +1717,7 @@ class MSSH:
             project.days[cd].add_function(function_name,float(function_value))
         else:
             logging.warning(reference+" is not a valid date. Can't add function "+function_name)
+        return reference
 
     @staticmethod
     def c_get_function(project:ChronoProject, reference:str,function_name:str)->str:
@@ -1724,6 +1727,7 @@ class MSSH:
             project.days[cd].functions[function_name]
         else:
             logging.warning(reference+" is not a valid date. Can't view function "+function_name)
+        return reference
 
 class ChronoClient:
 
@@ -2058,7 +2062,7 @@ class ChronoClient:
                 p.days[day["date"]].add_plank(ChronoPlankEvent(plank["time"],time_from_str(plank["start_time"])))
             for pushup in sport["pushups"]:
                 p.days[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time_from_str(pushup["start_time"])))
-            p.days[day["date"]].counter=day["counter"]
+            p.days[day["date"]].update_after_run()   
         self.project=p
         self.project.sevents=[ChronoTime(sevent["tdate"], start=sevent["start"], what=sevent["what"], tags=sevent["tags"]) for sevent in d["sevents"]]
         self.add_commands()
