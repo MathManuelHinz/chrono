@@ -77,8 +77,6 @@ MSSH_COMMS={
     "gblgetsplitforce": MSSH.c_gblf,
     "gbltreeview": MSSH.c_treeview,
     "fftplot": MSSH.c_fftplot,
-    "updatecounter": MSSH.c_update_counter,
-    "deletecounter": MSSH.c_delete_counter,
-    "deleteallcounters": MSSH.c_delete_counters,
-    "counter": MSSH.c_print_counter
+    "updatefunction":MSSH.c_set_function,
+    "getfunction":MSSH.c_get_function
 }

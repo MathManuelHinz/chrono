@@ -65,7 +65,6 @@ class ChronoDay:
         self.date=date(int(input_date[0:4]),int(input_date[5:7]),int(input_date[8:10])) 
         self.silent_events=[]
         self.sport={"runs":[],"pushups":[],"planks":[],"situps":[]}
-        self.counter:Dict[str,int]={}
         self.sleep=()
         self.functions=dict()
 
@@ -120,7 +119,7 @@ class ChronoDay:
         """Merges two events into one if they have the same what attribute and no time in between them."""
         for e1 in self.events:
             for e2 in self.events:
-                if not e1==e2 and e1.end==e2.start and e1.what==e2.what:
+                if not e1==e2 and e1.end==e2.start and e1.what==e2.what and e1.tags==e2.tags:
                     e=ChronoEvent(e1.start.isoformat(), e2.end.isoformat(), e1.what, list(set(e1.tags+e2.tags)))
                     logging.critical(f"merged to {e}")
                     self.events.remove(e1)
@@ -134,7 +133,6 @@ class ChronoDay:
         d["date"]=self.date.__str__()
         d["events"]=[event.to_dict() for event in self.events]
         d["sport"]={key:[entry.to_dict() for entry in self.sport[key]] for key in self.sport.keys()}
-        d["counter"]=self.counter
         d["functions"]=self.functions
         return d
 
@@ -161,18 +159,17 @@ class ChronoDay:
     def get_tags(self)->List[str]:
         return list(set(reduce(lambda a,b:a+b,[event.tags for event in self.events])))
 
-    def update_counter(self, counter:str, update:int):
-        if not counter in self.counter.keys():
-            self.counter[counter] = 0
-            logging.info(f"Added counter {counter} on {self.date}.") 
-        if update==-1:
-            self.counter[counter] +=1
-        else:
-            self.counter[counter] = update
-
     def delete_counter(self, counter:str):
         logging.info(f"Deleted counter {counter} on {self.date}.")
         if counter in self.counter.keys(): self.counter.pop(counter)
+
+    def add_function(self, function_name:str, function_value:float):
+        self.functions[function_name]=function_value
+
+    def get_function(self, function_name:str)->float:
+        if function_name in self.functions.keys():
+            return self.functions[function_name]
+        else: return 0
 
 class ChronoSchedule:
     
@@ -245,7 +242,10 @@ class ChronoProject:
         """Adds a day to the days dict."""
         if not day.date.isoformat() in self.days.keys():
             if self.settings["schedule"] and day.events==[]:
-                day.events += self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]
+                #day.events += self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]
+                for event in self.schedule.days[int(day.date.isocalendar()[1])%self.schedulemod][day.date.weekday()]:
+                    day.add_event(event)
+                day.merge()
             self.days[day.date.isoformat()]=day
             if self.settings["schedule"]:
                 sevents = []
@@ -663,7 +663,14 @@ class MSSH:
         #populate ys
         for day in days:
             for tag in tags:
-                if not tag in project.forbidden:
+                if tag in ["rem","deep","light","all_sleep"]:
+                    if tag in day.functions.keys():
+                        ys[tag].append(day.functions[tag]/3600)
+                    else:
+                        ys[tag].append(0)
+                elif tag in day.functions.keys():
+                    ys[tag].append(day.functions[tag])
+                elif not tag in project.forbidden:
                     ys[tag].append(get_time(day, tag, rtags))
                 elif tag in ["rem","deep","light","all_sleep"]:
                     if tag in day.functions.keys():
@@ -1677,7 +1684,10 @@ class MSSH:
         ys=[]
         #populate ys
         for day in days[index_offsets[0]:index_offsets[1]]:
-            ys.append(get_time(day, tag))
+            if tag in day.functions.keys():
+                ys.append(day.functions[tag])
+            else:
+                ys.append(get_time(day, tag))
         if len(ys)>0:avg=sum(ys)/len(ys)
         else: avg=0
         ys=[y-avg for y in ys]
@@ -1698,33 +1708,22 @@ class MSSH:
         return reference
 
     @staticmethod
-    def c_update_counter(project:ChronoProject, reference:str, counter:str, update:str="-1")->str:
-        """Creates or updates a counter of reference. update=-1 increments the counter by 1, any other value gets assigned directly."""
-        project.days[reference].update_counter(counter,int(update))
-        return reference
+    def c_set_function(project:ChronoProject, reference:str,function_name:str,function_value:str)->str:
+        """Set value of $function_name(reference)"""
+        cd=project.date_from_str(reference)
+        if cd in project.days.keys():
+            project.days[cd].add_function(function_name,float(function_value))
+        else:
+            logging.warning(reference+" is not a valid date. Can't add function "+function_name)
 
     @staticmethod
-    def c_delete_counter(project:ChronoProject, reference:str, counter:str)->str:
-        """Deletes the counter of reference."""
-        project.days[reference].delete_counter(counter)
-        return reference
-
-    @staticmethod
-    def c_delete_counters(project:ChronoProject, reference:str, counter:str)->str:
-        """Deletes the counter from days."""
-        for day in project.days.values():
-            day.delete_counter(counter)
-        return reference
-
-    @staticmethod
-    def c_print_counter(project:ChronoProject, reference:str)->str:
-        """Prints all counters of the current day."""
-        if len(project.days[reference].counter.keys())==0:
-            print("No counter of "+reference+ " exists.")
-        else: 
-            print(reduce(lambda a,b: a+"\n\n"+b, [key+" : "+str(project.days[reference].counter[key]) for key in project.days[reference].counter.keys()]))
-        return reference
-
+    def c_get_function(project:ChronoProject, reference:str,function_name:str)->str:
+        """Set value of $function_name(reference)"""
+        cd=project.date_from_str(reference)
+        if cd in project.days.keys():
+            project.days[cd].functions[function_name]
+        else:
+            logging.warning(reference+" is not a valid date. Can't view function "+function_name)
 
 class ChronoClient:
 
