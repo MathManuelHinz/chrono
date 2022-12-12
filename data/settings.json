@@ -45,8 +45,7 @@
         "gbls": "gblgetsplitforce $N",
         "gbltv": "gbltreeview $N",
         "fftp": "fftplot $N",
-        "ucounter": "updatecounter $N",
-        "dcounter": "deletecounter $N",
-        "dacounter": "deleteallcounters $N"
+        "uf": "updatefunction $N",
+        "gf": "getfunction $N" 
     }
 }
