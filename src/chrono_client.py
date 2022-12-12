@@ -411,6 +411,13 @@ class ChronoProject:
                             if tag1 != tag2 and tag1 not in ignored_tags and tag2 not in ignored_tags:                          
                                 g.add_edge(tag1, tag2)
         return g,f
+    
+    def get_tags(self)->List[str]:
+        tags=set()
+        for day in self.days.values():
+            for tag in day.get_tags():
+                tags.add(tag)
+        return tag
 
 
 class MSSH:
@@ -1670,15 +1677,26 @@ class MSSH:
         MSSH.c_fill_empty_days(project,reference,start,stop)
         days = project.analysis_get_between(start, stop, reference)
         n=len(days)
-        index_offsets:List[int]=[0,n-1]      
-        for i in range(0,n):
-            if tag in days[i].get_tags():
-                index_offsets[0]=i
-                break
-        for i in range(1,n+1):
-            if (tag in days[n-i].get_tags()):
-                index_offsets[1]=n-i
-                break
+        tags=project.get_tags()
+        index_offsets:List[int]=[0,n-1]    
+        if tag in tags:  
+            for i in range(0,n):
+                if tag in days[i].get_tags():
+                    index_offsets[0]=i
+                    break
+            for i in range(1,n+1):
+                if (tag in days[n-i].get_tags()):
+                    index_offsets[1]=n-i
+                    break
+        else:
+            for i in range(0,n):
+                if tag in days[i].functions.keys():
+                    index_offsets[0]=i
+                    break
+            for i in range(1,n+1):
+                if tag in days[n-i].functions.keys():
+                    index_offsets[1]=n-i
+                    break
         if index_offsets[0]>0:
             logging.info(f"Ignored the first {index_offsets[0]} day(s)")
         if index_offsets[1]>0:
@@ -1699,13 +1717,13 @@ class MSSH:
         yf = fft(y)
         xf = [1/v if v!=0 else 2*(n+1) for v in list(fftfreq(N, T)[:N//2])]
         tmp=(2.0/N * np.abs(yf[:N//2]))
-        plt.plot(xf, tmp,label=f"Influence(1/f)")
+        plt.plot(xf, tmp,label=f"Influence(1/f), {N} data points")
+        plt.scatter(xf, tmp,marker="*",c="red")
         if max_period_length=="max": max_period_length=str(n+1)
         plt.xlim(int(min_period_length),int(max_period_length))
         plt.grid()
         plt.title(f"fft({tag}):[{days[index_offsets[0]].date.isoformat()},{days[index_offsets[1]].date.isoformat()}]")
         plt.legend()
-        #plt.yscale("log") not useful!
         plt.show()
         return reference
 
