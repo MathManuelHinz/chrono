@@ -417,7 +417,7 @@ class ChronoProject:
         for day in self.days.values():
             for tag in day.get_tags():
                 tags.add(tag)
-        return tag
+        return tags
 
 
 class MSSH:
