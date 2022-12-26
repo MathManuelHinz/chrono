@@ -1747,9 +1747,8 @@ class MSSH:
     @staticmethod
     def c_set_function(project:ChronoProject, reference:str,function_name:str,function_value:str)->str:
         """Set value of $function_name(reference)"""
-        cd=project.date_from_str(reference)
-        if cd in project.days.keys():
-            project.days[cd].add_function(function_name,float(function_value))
+        if reference in project.days.keys():
+            project.days[reference].add_function(function_name,float(function_value))
         else:
             logging.warning(reference+" is not a valid date. Can't add function "+function_name)
         return reference
@@ -1757,16 +1756,15 @@ class MSSH:
     @staticmethod
     def c_get_function(project:ChronoProject, reference:str,function_name:str)->str:
         """Set value of $function_name(reference)"""
-        cd=project.date_from_str(reference)
-        if cd in project.days.keys():
-            project.days[cd].functions[function_name]
+        if reference in project.days.keys():
+            print(project.days[reference].functions[function_name])
         else:
             logging.warning(reference+" is not a valid date. Can't view function "+function_name)
         return reference
 
     @staticmethod
     def c_review_days(project:ChronoProject, reference:str, ndays:str,interpolate:str="3")->str:
-        assert project.settings["review_days"]["tags"]==9 #TODO: verbessern
+        assert len(project.settings["review_days"]["tags"])==9 #TODO: verbessern
         n_days=int(ndays)
         MSSH.c_oura_sleep(project,"ref",(datetime.today().date()-timedelta(days=n_days+1)).isoformat(),"stop")
         days=project.analysis_get_between("start","stop","ref")[-int(n_days)-1:-1]
