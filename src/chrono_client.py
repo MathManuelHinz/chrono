@@ -1768,6 +1768,7 @@ class MSSH:
         n_days=int(ndays)
         MSSH.c_oura_sleep(project,"ref",(datetime.today().date()-timedelta(days=n_days+1)).isoformat(),"stop")
         days=project.analysis_get_between("start","stop","ref")[-int(n_days)-1:-1]
+        fs=project.get_functions(days)
         tags=project.settings["review_days"]["tags"]
         goals=project.settings["review_days"]["goals"]
         ys={tag:[] for tag in tags}
@@ -1775,16 +1776,15 @@ class MSSH:
         normalizer={key:n_days*project.settings["review_days"]["normalizer"][key] for key in project.settings["review_days"]["normalizer"].keys()}
         for day in days:
             for tag in tags:
-                if tag in day.functions.keys(): 
+                if tag in fs: 
                     if tag=="all_sleep":
                         ys[tag].append(project.get_function(day.date,tag,int(interpolate))/3600)
                         normalizer[tag]+=1
                     else:
                         ys[tag].append(project.get_function(day.date,tag,int(interpolate)))
                         normalizer[tag]+=1
-                elif not tag in project.forbidden:
+                else:
                     ys[tag].append(get_time(day, tag))
-                else: ys[tag].append(0)
         tags_sum={tag:sum(ys[tag]) for tag in ys.keys()}
         fig, axs = plt.subplots(3, 3)
         for i in range(9):
