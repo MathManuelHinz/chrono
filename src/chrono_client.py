@@ -52,7 +52,7 @@ class ChronoDay:
     date:date
     silent_events:List[ChronoTime]
     sport:Dict[str, List[ChronoSportEvent]]
-    functions:Dict[str,float] #implementieren!
+    functions:Dict[str,float]
 
     def __init__(self, events:List[ChronoEvent], input_date:str):
         """Constructor: ChronoDay.
@@ -419,6 +419,24 @@ class ChronoProject:
                 tags.add(tag)
         return tags
 
+    def get_function(self, date:datetime.date, function_name:str, interpolate:int=0)->float:
+        if not date.isoformat() in self.days.keys():
+            return 0
+        elif function_name in self.days[date.isoformat()].functions.keys():
+            return self.days[date.isoformat()].functions[function_name]
+        elif interpolate==0:
+            return 0
+        else:
+            days=[date.isoformat() for date in [date-timedelta(days=i) for i in range(1,interpolate)]+[date+timedelta(days=i) for i in range(1,interpolate)]]
+            return sum([self.days[date].get_function(function_name) for date in days if date in self.days.keys()])/max(1,len([self.days[date].get_function(function_name) for date in days if date in self.days.keys() and function_name in self.days[date].functions.keys()]))
+
+    def get_functions(self, days:List[ChronoDay])->List[str]:
+        fs=set()
+        for day in days:
+            for f in day.functions.keys():
+                fs.add(f)
+        return fs
+
 
 class MSSH:
 
@@ -653,52 +671,51 @@ class MSSH:
             raise Exception("unknown mode")
     
     @staticmethod
-    def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe", r_str:str="7", start_date:str="start", end_date:str="stop", )->str:
+    def c_plot_stats(project:ChronoProject, reference:str, tags:str="mathe", r_str:str="7",interpolate:str="0", start_date:str="start", end_date:str="stop", )->str:
         """Plots the hours of var:tags and their sum. Calls fillemptydays. Both var:start_date and var:end_date support IntelliRef."""
         assert not "sum" in tags
         plt.clf()
         #preperation
         MSSH.c_fill_empty_days(project,reference,start_date,end_date)
-        atags=tags.split(",")
-        tags=[t for t in atags if not "&" == t[0]]
-        rtags=[t[1:] for t in atags if "&" == t[0]]
+        tags=tags.split(",")
         ticksi=5
         r=int(r_str)
         days = project.analysis_get_between(start_date, end_date, reference)
         n=len(days)
         xs=[i for i in range(n)]
         ys={tag:[] for tag in tags}
-        
+        fs=project.get_functions(days)
         #populate ys
         for day in days:
             for tag in tags:
                 if tag in ["rem","deep","light","all_sleep"]:
-                    if tag in day.functions.keys():
-                        ys[tag].append(day.functions[tag]/3600)
-                    else:
-                        ys[tag].append(0)
-                elif tag in day.functions.keys():
-                    ys[tag].append(day.functions[tag])
-                elif not tag in project.forbidden:
-                    ys[tag].append(get_time(day, tag, rtags))
-                elif tag in ["rem","deep","light","all_sleep"]:
-                    if tag in day.functions.keys():
-                        ys[tag].append(day.functions[tag]/3600)
-                    else:
-                        ys[tag].append(0)
+                    ys[tag].append(project.get_function(day.date,tag,interpolate=int(interpolate))/3600)
+                elif tag in fs:
+                    ys[tag].append(project.get_function(day.date,tag,interpolate=int(interpolate)))
+                else:
+                    ys[tag].append(get_time(day, tag))
+
+        for tag in tags:
+            N=len(ys[tag])
+            for i in range(len(ys[tag])):
+                if ys[tag][i]=="i": 
+                    ys[tag][i]=sum([ys[tag][i+j] for j in range(int(interpolate)) if ys[tag][i+j] != "i" and i+j<N])+sum([ys[tag][i-j] for j in range(int(interpolate)) if ys[tag][i-j] != "i"])
+                    normalizier=max(1,len([j for j in range(int(interpolate))  if ys[tag][i+j] != "i"and i+j<N])+len([j for j in range(int(interpolate))  if ys[tag][i-j] != "i"]))
+                    ys[tag][i]=ys[tag][i]/normalizier
 
         #Calculate overhead (sum)
         corr=[0.0 for _ in days]
         for i in range(n):
             for event in days[i].events:
-                if not (I:=get_intersect(tags, event.tags))==[] and mc.subset(rtags, event.tags):
+                if not (I:=get_intersect(tags, event.tags))==[]:
                     corr[i] += ((datetime.combine(date.today(), event.end)\
                      - datetime.combine(date.today(), event.start))\
                 .seconds/3600)*(len(I)-1) 
-        
 
-        if len(tags)>1: ys["sum"]=[sum([ys[tag][i] for tag in tags if not tag in project.forbidden])-corr[i] for i in range(n)]
-        
+        if len(tags)>1: 
+            ys["sum"]=[sum([ys[tag][i] for tag in tags])-corr[i] for i in range(n)]
+
+
         #plot tags+sum
         ax=plt.subplot(111)
         box = ax.get_position()
@@ -1747,6 +1764,46 @@ class MSSH:
             logging.warning(reference+" is not a valid date. Can't view function "+function_name)
         return reference
 
+    @staticmethod
+    def c_review_days(project:ChronoProject, reference:str, ndays:str,interpolate:str="3")->str:
+        assert project.settings["review_days"]["tags"]==9 #TODO: verbessern
+        n_days=int(ndays)
+        MSSH.c_oura_sleep(project,"ref",(datetime.today().date()-timedelta(days=n_days+1)).isoformat(),"stop")
+        days=project.analysis_get_between("start","stop","ref")[-int(n_days)-1:-1]
+        tags=project.settings["review_days"]["tags"]
+        goals=project.settings["review_days"]["goals"]
+        ys={tag:[] for tag in tags}
+        goal_colors=project.settings["review_days"]["goal_colors"]
+        normalizer={key:n_days*project.settings["review_days"]["normalizer"][key] for key in project.settings["review_days"]["normalizer"].keys()}
+        for day in days:
+            for tag in tags:
+                if tag in day.functions.keys(): 
+                    if tag=="all_sleep":
+                        ys[tag].append(project.get_function(day.date,tag,int(interpolate))/3600)
+                        normalizer[tag]+=1
+                    else:
+                        ys[tag].append(project.get_function(day.date,tag,int(interpolate)))
+                        normalizer[tag]+=1
+                elif not tag in project.forbidden:
+                    ys[tag].append(get_time(day, tag))
+                else: ys[tag].append(0)
+        tags_sum={tag:sum(ys[tag]) for tag in ys.keys()}
+        fig, axs = plt.subplots(3, 3)
+        for i in range(9):
+            axs[i//3, i%3].plot(ys[tags[i]],label="Data")
+            axs[i//3, i%3].scatter([j for j in range(len(ys[tags[i]]))],ys[tags[i]],label="DataPoints",c="red",marker="*")
+            axs[i//3, i%3].plot([tags_sum[tags[i]]/max(normalizer[tags[i]],1) for _ in range(n_days)],label="Average")
+            axs[i//3, i%3].plot([goals[tags[i]] for _ in range(n_days)],label="Reference")
+            axs[i//3, i%3].set_title(tags[i],color=goal_colors[tags[i]][int(goals[tags[i]]<=tags_sum[tags[i]]/max(normalizer[tags[i]],1))])
+        if tags[i]=="weight":
+            axs[i//3, i%3].set_ylim((min([y for y in ys[tags[i]] if y >0])-1,max(max(ys[tags[i]])+1,goals[tags[i]])))
+        elif tags[i]=="all_sleep":
+            axs[i//3, i%3].set_ylim((min([y for y in ys[tags[i]] if y >0])-1,max(max(ys[tags[i]])+1,goals[tags[i]])))
+            axs[i//3, i%3].legend(loc=2,prop={'size': 6})
+        fig.tight_layout(pad=1.0)
+        plt.show()
+        return reference
+
 class ChronoClient:
 
     path:str
@@ -1784,6 +1841,7 @@ class ChronoClient:
 
     def c_help(self, project:ChronoProject, reference:str, cmd:str)->str:
         """Describes a given var:cmd."""
+        cmd=cmd.lower()
         if cmd in project.alias.keys():
             print("calls : "+self.project.settings["alias"][cmd])
             called_cmd=self.project.settings["alias"][cmd].split(" ")[0]
@@ -1849,7 +1907,7 @@ class ChronoClient:
 
     def c_options(self, project:ChronoProject, reference:str)->str:
         """Opens the settings file."""
-        subprocess.Popen(["start","data/settings.json"], shell=True)
+        subprocess.Popen(["code","data/settings.json"], shell=True)
         return reference
 
     def c_write_overview(self, project:ChronoProject, reference:str)->str:
@@ -2090,13 +2148,13 @@ class ChronoClient:
         return self.project.__repr__()
 
 
-def get_time(day:ChronoDay, tag:str, rtags:List[str]=[])->float:
+def get_time(day:ChronoDay, tag:str)->float:
     """
     Returns the time [hours] a certain activity associated with the tag has been done on a given day. 
     """
     return sum([((datetime.combine(date.today(), event.end)\
                      - datetime.combine(date.today(), event.start))\
-                .seconds/3600)*(tag in event.tags) for event in day.events if mc.subset(rtags, event.tags)])
+                .seconds/3600)*(tag in event.tags) for event in day.events])
 
 def get_intersect_sum(day:ChronoDay, tags:List[str])->float:
     """

@@ -78,5 +78,6 @@ MSSH_COMMS={
     "gbltreeview": MSSH.c_treeview,
     "fftplot": MSSH.c_fftplot,
     "updatefunction":MSSH.c_set_function,
-    "getfunction":MSSH.c_get_function
+    "getfunction":MSSH.c_get_function,
+    "reviewday":MSSH.c_review_days
 }
