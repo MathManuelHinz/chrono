@@ -907,7 +907,6 @@ class MSSH:
                             if css.date()==cse.date():
                                 project.days[css.date().isoformat()].add_event(ChronoEvent(css.time().isoformat(),cse.time().isoformat(),"sleep", ["all_sleep",get_sleep_phase(pattern_5_min[i]),"ouras", "generated"]))
                             elif cse.time().isoformat()!="00:00":
-                                print(css,cse)
                                 project.days[css.date().isoformat()].add_event(ChronoEvent(css.time().isoformat(),"23:59","sleep", ["all_sleep",get_sleep_phase(pattern_5_min[i]),"ouras", "generated"]))
                                 project.days[cse.date().isoformat()].add_event(ChronoEvent("00:00",cse.time().isoformat(),"sleep", ["all_sleep",get_sleep_phase(pattern_5_min[i]),"ouras", "generated"]))
                             else:
