@@ -79,5 +79,6 @@ MSSH_COMMS={
     "fftplot": MSSH.c_fftplot,
     "updatefunction":MSSH.c_set_function,
     "getfunction":MSSH.c_get_function,
-    "reviewday":MSSH.c_review_days
+    "reviewday":MSSH.c_review_days,
+    "showsleepday":MSSH.c_show_sleep_day
 }

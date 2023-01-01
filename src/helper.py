@@ -261,3 +261,13 @@ def str_to_seconds(str_s:str)->int:
         return int(str_s[0:2])*60*60+int(str_s[3:5])*60+int(str_s[6:8])
     else:
         raise Exception(f"Invalid input: {str_s}")
+
+def fix_oura(s:str)->str:
+    if len(s)<3: return s
+    return s[0] +"".join([s[i] if not s[i-1]==s[i+1] else s[i-1] for i in range(1,len(s)-1)])+s[-1]
+
+def get_sleep_phase(phase:str)->str:
+    if phase=="1": return "sleep_phase_deep"
+    elif phase=="2": return "sleep_phase_light"
+    elif phase=="3": return "sleep_phase_rem"
+    else : return "sleep_phase_awake"
