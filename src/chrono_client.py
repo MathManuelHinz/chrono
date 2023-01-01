@@ -22,7 +22,7 @@ import matplotlib.animation as animation
 from src.helper import (create_db, get_color, get_intersect, heatmap, list_to_string, seconds_to_time, split_command, str_to_seconds, times_tags_to_ints,
                     write_table, time_from_str, get_tf_length, 
                     WEEKDAYS, MSSH_color_scheme, sleepdata_to_time, cursed_get_lambda, what_or_none, 
-                    concatsem, get_pace_ticks,times_tags_to_ints, time_to_int, add_time_delta)
+                    concatsem, get_pace_ticks,times_tags_to_ints, time_to_int, add_time_delta, fix_oura, get_sleep_phase)
 
 from src.sport import (ChronoPlankEvent, ChronoRunningEvent, ChronoSitUpsEvent, 
                    ChronoPushUpEvent, ChronoSportEvent)
@@ -65,7 +65,7 @@ class ChronoDay:
         self.date=date(int(input_date[0:4]),int(input_date[5:7]),int(input_date[8:10])) 
         self.silent_events=[]
         self.sport={"runs":[],"pushups":[],"planks":[],"situps":[]}
-        self.sleep=()
+        self.sleep=""
         self.functions=dict()
 
     def __repr__(self)->str:
@@ -117,6 +117,7 @@ class ChronoDay:
 
     def merge(self)->None:
         """Merges two events into one if they have the same what attribute and no time in between them."""
+        self.events.sort(key=lambda x:x.start)
         for e1 in self.events:
             for e2 in self.events:
                 if not e1==e2 and e1.end==e2.start and e1.what==e2.what and e1.tags==e2.tags:
@@ -134,6 +135,7 @@ class ChronoDay:
         d["events"]=[event.to_dict() for event in self.events]
         d["sport"]={key:[entry.to_dict() for entry in self.sport[key]] for key in self.sport.keys()}
         d["functions"]=self.functions
+        d["sleep"]=self.sleep
         return d
 
     def add_run(self, run:ChronoRunningEvent)->None:
@@ -152,10 +154,6 @@ class ChronoDay:
     def add_plank(self, plank:ChronoPlankEvent)->None:
         """Adds a plank event to the "plank" list."""
         self.sport["planks"].append(plank)
-
-    def get_sleep(self)->time:
-        """Returns a time object representing the sleep attribute."""
-        return sleepdata_to_time(self.sleep)
 
     def get_tags(self)->List[str]:
         return list(set(reduce(lambda a,b:a+b,[event.tags for event in self.events])))
@@ -214,7 +212,7 @@ class ChronoProject:
         self.header=["\\documentclass{article}"]
         self.scheme=MSSH_color_scheme
         self.load_settings()
-        self.forbidden=["rem","deep","light","all_sleep","run_distance","run_time"]
+        self.forbidden=["sleep_phase_deep","sleep_phase_light","sleep_phase_rem","sleep_phase_awake","all_sleep","run_distance","run_time"]
 
     def set_schedule(self,schedule:ChronoSchedule)->None:
         """Sets the schedule for this project."""
@@ -688,9 +686,7 @@ class MSSH:
         #populate ys
         for day in days:
             for tag in tags:
-                if tag in ["rem","deep","light","all_sleep"]:
-                    ys[tag].append(project.get_function(day.date,tag,interpolate=int(interpolate))/3600)
-                elif tag in fs:
+                if tag in fs:
                     ys[tag].append(project.get_function(day.date,tag,interpolate=int(interpolate)))
                 else:
                     ys[tag].append(get_time(day, tag))
@@ -895,7 +891,6 @@ class MSSH:
     @staticmethod
     def c_oura_sleep(project:ChronoProject, reference:str, start:str, stop:str)->str:
         """Gets your sleep data $\n$ [start-1,stop] from oura is such a connection exists."""
-        ds=[day.date for day in project.days.values()]
         start=project.date_from_str(start, reference).isoformat()
         stop=project.date_from_str(stop, reference).isoformat()
         delete_by_tag(project,reference,"ouras",project.analysis_get_between(start, stop, reference))
@@ -904,54 +899,27 @@ class MSSH:
             if sleepdata[0]:
                 keys=project.days.keys()
                 for key in sleepdata[1].keys():
-                    project.days[key].functions["rem"]=sleepdata[1][key][4]
-                    project.days[key].functions["deep"]=sleepdata[1][key][5]
-                    project.days[key].functions["light"]=sleepdata[1][key][6]
-                    project.days[key].functions["all_sleep"]=sleepdata[1][key][4]+sleepdata[1][key][5]+sleepdata[1][key][6]
-                    if sleepdata[1][key][2]==sleepdata[1][key][3] or sleepdata[1][key][0][:5] == "23:59":
-                        if sleepdata[1][key][0][:5] == "23:59":e=ChronoEvent("00:01",sleepdata[1][key][1],"Oura Sleep", ["sleep","ouras","generated","connected_sleep"])
-                        else:
-                            e=ChronoEvent(sleepdata[1][key][0],sleepdata[1][key][1],"Oura Sleep", ["sleep","ouras","generated","connected_sleep"])
-                        if not sleepdata[1][key][2] in keys:
-                            project.add_day(ChronoDay([],sleepdata[1][key][2]))
-                            project.days[sleepdata[1][key][2]].events = []
-                        if sleepdata[1][key][2] in keys and not "ouras" in [tag for event in project.days[sleepdata[1][key][2]].events for tag in event.tags]: 
-                            try:
-                                project.add_event(e, sleepdata[1][key][2])
-                            except:
-                                ends=[event.end for event in project.days[sleepdata[1][key][2]].events if event.start <= e.start <= event.end]
-                                starts=[event.start for event in project.days[sleepdata[1][key][2]].events if event.start <= e.end <= event.end]
-                                if ends != []: e.start=max(max(ends), e.start)
-                                if starts != []: e.end=min(min(starts), e.end)
-                                e.tags+=["ouras_modified"]
-                                logging.warning(f"{sleepdata[1][key][2]}: Added {e} instead")
-                                project.add_event(e, sleepdata[1][key][2])
-                    else:
-                        
-                        e1=ChronoEvent(sleepdata[1][key][0],"23:59","Oura Sleep", ["sleep","ouras","generated","split_sleep"])
-                        e2=ChronoEvent("00:01", sleepdata[1][key][1], "Oura Sleep", ["sleep","ouras","generated", "split_sleep"])
-                        if not sleepdata[1][key][2] in keys:
-                            logging.warning(f"Added {sleepdata[1][key][2]}")
-                            project.add_day(ChronoDay([],key))   
-                            project.days[sleepdata[1][key][2]].events = []
-                        if not sleepdata[1][key][3] in keys:
-                            logging.warning(f"Added {sleepdata[1][key][3]}")
-                            project.add_day(ChronoDay([],sleepdata[1][key][3])) 
-                            project.days[sleepdata[1][key][3]].events = []
+                    css=datetime.fromisoformat(sleepdata[1][key][0]) # current sleep start
+                    cse=css+timedelta(minutes=5) # cse
+                    pattern_5_min=sleepdata[1][key][2]
+                    for i in range(len(pattern_5_min)):
                         try: 
-                            project.add_event(e1, sleepdata[1][key][2])
+                            if css.date()==cse.date():
+                                project.days[css.date().isoformat()].add_event(ChronoEvent(css.time().isoformat(),cse.time().isoformat(),"sleep", ["all_sleep",get_sleep_phase(pattern_5_min[i]),"ouras", "generated"]))
+                            elif cse.time().isoformat()!="00:00":
+                                print(css,cse)
+                                project.days[css.date().isoformat()].add_event(ChronoEvent(css.time().isoformat(),"23:59","sleep", ["all_sleep",get_sleep_phase(pattern_5_min[i]),"ouras", "generated"]))
+                                project.days[cse.date().isoformat()].add_event(ChronoEvent("00:00",cse.time().isoformat(),"sleep", ["all_sleep",get_sleep_phase(pattern_5_min[i]),"ouras", "generated"]))
+                            else:
+                                project.days[css.date().isoformat()].add_event(ChronoEvent(css.time().isoformat(),"23:59","sleep", ["all_sleep",get_sleep_phase(pattern_5_min[i]),"ouras", "generated"]))
                         except:
-                            e1.start=max(max([event.end for event in project.days[sleepdata[1][key][2]].events]),e1.start)
-                            e1.tags+=["ouras_modified"]
-                            project.add_event(e1, sleepdata[1][key][2])
-                            logging.warning(f"{sleepdata[1][key][2]}: Added {e1} instead")
-                        try:
-                            project.add_event(e2, sleepdata[1][key][3])
-                        except:
-                            e2.tags+=["ouras_modified"]
-                            e2.end=min(min([event.start for event in project.days[sleepdata[1][key][3]].events]), e2.end)
-                            project.add_event(e2, sleepdata[1][key][3])
-                            logging.warning(f"{sleepdata[1][key][3]}: Added {e2} instead")
+                            if not css.date().isoformat() in keys: project.add_day(ChronoDay([],css.date().isoformat()))
+                            if not cse.date().isoformat() in keys: project.add_day(ChronoDay([],cse.date().isoformat()))
+                        project
+                        css=cse
+                        cse=css+timedelta(minutes=5)
+                    project.days[key].sleep=pattern_5_min
+                    project.days[key].merge()
         else:           
             print("No oura is linked: Check your settings")
             logging.warning("No oura is linked: Check your settings")   
@@ -1777,12 +1745,8 @@ class MSSH:
         for day in days:
             for tag in tags:
                 if tag in fs: 
-                    if tag=="all_sleep":
-                        ys[tag].append(project.get_function(day.date,tag,int(interpolate))/3600)
-                        normalizer[tag]+=1
-                    else:
-                        ys[tag].append(project.get_function(day.date,tag,int(interpolate)))
-                        normalizer[tag]+=1
+                    ys[tag].append(project.get_function(day.date,tag,int(interpolate)))
+                    normalizer[tag]+=1
                 else:
                     ys[tag].append(get_time(day, tag))
         tags_sum={tag:sum(ys[tag]) for tag in ys.keys()}
@@ -1800,6 +1764,19 @@ class MSSH:
             axs[i//3, i%3].legend(loc=2,prop={'size': 6})
         fig.tight_layout(pad=1.0)
         plt.show()
+        return reference
+
+    @staticmethod
+    def c_show_sleep_day(project:ChronoProject, reference:str, day:str)->str:
+        """"Plot the sleep phases of the given day. 4~Awake,3~Rem,2~light,1~deep"""
+        if day in project.days.keys():
+            if not project.days[day].sleep=="":
+                events=[e for e in project.days[day].events if "all_sleep" in e.tags]
+                plt.plot([int(sp) for sp in fix_oura(project.days[day].sleep)],label=f"sleepphases: {day}")
+                plt.xticks([0,len(project.days[day].sleep)-1], [events[0].start.isoformat(),events[-1].end.isoformat()])
+                plt.yticks([1,2,3,4],["deep","light","rem","awake"])
+                plt.legend()
+                plt.show()
         return reference
 
 class ChronoClient:
@@ -2136,6 +2113,7 @@ class ChronoClient:
                 p.days[day["date"]].add_plank(ChronoPlankEvent(plank["time"],time_from_str(plank["start_time"])))
             for pushup in sport["pushups"]:
                 p.days[day["date"]].add_pushup(ChronoPushUpEvent(pushup["times"],pushup["mults"],time_from_str(pushup["start_time"])))
+            p.days[day["date"]].sleep=day["sleep"]
             p.days[day["date"]].update_after_run()   
         self.project=p
         self.project.sevents=[ChronoTime(sevent["tdate"], start=sevent["start"], what=sevent["what"], tags=sevent["tags"]) for sevent in d["sevents"]]
